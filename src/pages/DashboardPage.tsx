@@ -1,47 +1,47 @@
 import { useAuth } from '@/hooks/useAuth'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Construction } from 'lucide-react'
+import DeveloperDashboard from '@/components/dashboard/DeveloperDashboard'
+import SupportDashboard from '@/components/dashboard/SupportDashboard'
+import CloserDashboard from '@/components/dashboard/CloserDashboard'
+import MarketingDashboard from '@/components/dashboard/MarketingDashboard'
+import AdminDashboard from '@/components/dashboard/AdminDashboard'
+
+const greetings: Record<string, string> = {
+  developer: 'Panel de Desarrollo',
+  support: 'Panel de Soporte',
+  closer: 'Panel de Ventas',
+  marketing: 'Panel de Marketing',
+  admin: 'Panel de Administración',
+}
+
+const subtitles: Record<string, string> = {
+  developer: 'Tus tareas activas y objetivos del equipo',
+  support: 'Estado de tickets y asignaciones',
+  closer: 'Pipeline de ventas y actividad comercial',
+  marketing: 'Métricas de leads y conversión',
+  admin: 'Vista general del workspace',
+}
 
 export default function DashboardPage() {
   const { profile, role } = useAuth()
+  const r = role ?? 'developer'
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Bienvenido, {profile?.name ?? 'usuario'} 👋
+          {greetings[r] ?? 'Dashboard'}
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Panel principal de Factory Hub
+        <p className="text-sm text-muted-foreground">
+          {profile?.name ? `Hola, ${profile.name.split(' ')[0]}. ` : ''}
+          {subtitles[r] ?? ''}
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Badge variant="outline">
-          {role === 'admin' && 'Administrador'}
-          {role === 'developer' && 'Developer'}
-          {role === 'support' && 'Soporte'}
-          {role === 'closer' && 'Closer B2B'}
-          {role === 'marketing' && 'Marketing'}
-        </Badge>
-        <span className="text-xs text-muted-foreground">Sesion activa</span>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Construction className="h-4 w-4 text-primary" />
-            Dashboard en construccion
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Las metricas personalizadas por rol se iran agregando con cada modulo.
-            La autenticacion y el sistema de roles esta funcionando correctamente.
-          </p>
-        </CardContent>
-      </Card>
+      {r === 'developer' && <DeveloperDashboard />}
+      {r === 'support' && <SupportDashboard />}
+      {r === 'closer' && <CloserDashboard />}
+      {r === 'marketing' && <MarketingDashboard />}
+      {r === 'admin' && <AdminDashboard />}
     </div>
   )
 }
