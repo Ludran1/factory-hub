@@ -25,6 +25,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Relationships: []
       }
       projects: {
         Row: {
@@ -37,6 +38,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['projects']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['projects']['Insert']>
+        Relationships: []
       }
       objectives: {
         Row: {
@@ -51,6 +53,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['objectives']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['objectives']['Insert']>
+        Relationships: []
       }
       tasks: {
         Row: {
@@ -65,6 +68,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['tasks']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['tasks']['Insert']>
+        Relationships: []
       }
       tickets: {
         Row: {
@@ -83,6 +87,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['tickets']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['tickets']['Insert']>
+        Relationships: []
       }
       ticket_comments: {
         Row: {
@@ -95,6 +100,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['ticket_comments']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['ticket_comments']['Insert']>
+        Relationships: []
       }
       ticket_activity: {
         Row: {
@@ -107,6 +113,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['ticket_activity']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['ticket_activity']['Insert']>
+        Relationships: []
       }
       leads: {
         Row: {
@@ -127,6 +134,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['leads']['Insert']>
+        Relationships: []
       }
       lead_activities: {
         Row: {
@@ -139,6 +147,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['lead_activities']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['lead_activities']['Insert']>
+        Relationships: []
       }
       lead_tasks: {
         Row: {
@@ -152,6 +161,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['lead_tasks']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['lead_tasks']['Insert']>
+        Relationships: []
       }
       collab_boards: {
         Row: {
@@ -164,6 +174,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['collab_boards']['Row'], 'id' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['collab_boards']['Insert']>
+        Relationships: []
       }
       notes: {
         Row: {
@@ -177,6 +188,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['notes']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['notes']['Insert']>
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -190,10 +202,20 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['notifications']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>
+        Relationships: []
       }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
-    Enums: Record<string, never>
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }

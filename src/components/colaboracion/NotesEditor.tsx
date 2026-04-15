@@ -189,9 +189,9 @@ export default function NotesEditor({ projectId }: Props) {
           {/* Toolbar */}
           <div className="flex items-center gap-1 px-3 py-2 border-b bg-muted/30 flex-wrap">
             <Button
-              variant="ghost" size="icon" className="h-7 w-7"
+              variant="ghost"
+              size="icon"
               onClick={() => editor?.chain().focus().toggleBold().run()}
-              data-active={editor?.isActive('bold')}
               className={cn('h-7 w-7', editor?.isActive('bold') && 'bg-accent')}
             >
               <Bold className="h-3.5 w-3.5" />
