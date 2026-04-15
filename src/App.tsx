@@ -10,6 +10,7 @@ import DesarrolloPage from '@/pages/DesarrolloPage'
 import SoportePage from '@/pages/SoportePage'
 import MarketingPage from '@/pages/MarketingPage'
 import ColaboracionPage from '@/pages/ColaboracionPage'
+import UsersPage from '@/pages/UsersPage'
 import { Loader2 } from 'lucide-react'
 
 const queryClient = new QueryClient({
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="colaboracion" element={<ColaboracionPage />} />
         <Route path="marketing" element={<MarketingPage />} />
         <Route path="soporte" element={<SoportePage />} />
+        <Route path="usuarios" element={<UsersPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

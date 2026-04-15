@@ -10,55 +10,41 @@ export function useAuthInit() {
 
     async function fetchProfile(userId: string) {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
           .single()
-
-        if (!mounted) return
-        if (error) throw error
-        if (data) setProfile(data)
+        if (mounted && data) setProfile(data)
       } catch {
-        // Profile not found or RLS error — still unblock the UI
-      } finally {
-        if (mounted) setLoading(false)
+        // Profile not found or RLS error
       }
     }
 
-    async function init() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!mounted) return
-
-        if (session?.user) {
-          setUser(session.user)
-          await fetchProfile(session.user.id)
-        } else {
-          reset()
-        }
-      } catch {
-        if (mounted) reset()
-      }
-    }
-
-    init()
-
+    // Use onAuthStateChange as the single source of truth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
 
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user) {
         setUser(session.user)
         await fetchProfile(session.user.id)
-      } else if (event === 'SIGNED_OUT') {
-        reset()
-      } else if (event === 'INITIAL_SESSION') {
-        // Already handled by getSession above — ignore
+      } else {
+        setUser(null)
+        setProfile(null)
       }
+
+      // Always unblock UI after processing any auth event
+      if (mounted) setLoading(false)
     })
+
+    // Fallback: if no auth event fires within 3s, unblock UI
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 3000)
 
     return () => {
       mounted = false
+      clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [])

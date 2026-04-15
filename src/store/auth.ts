@@ -8,6 +8,7 @@ interface Profile {
   name: string
   avatar_url: string | null
   role: UserRole
+  allowed_modules: string[]
 }
 
 interface AuthState {

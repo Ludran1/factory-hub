@@ -20,6 +20,7 @@ export interface Database {
           name: string
           avatar_url: string | null
           role: UserRole
+          allowed_modules: string[]
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at'>

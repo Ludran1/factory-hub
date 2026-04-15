@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Excalidraw } from '@excalidraw/excalidraw'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types'
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types/types'
+import '@excalidraw/excalidraw/index.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { useBoards, useCreateBoard, useSaveBoard } from '@/hooks/useCollab'
+import { useBoards, useCreateBoard, useSaveBoard, useDeleteBoard } from '@/hooks/useCollab'
 import { useAuth } from '@/hooks/useAuth'
-import { Plus, Save, Loader2, ChevronDown } from 'lucide-react'
+import { Plus, Save, Loader2, ChevronDown, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +19,7 @@ export default function WhiteBoard({ projectId }: Props) {
   const { data: boards = [], isLoading } = useBoards(projectId)
   const createBoard = useCreateBoard()
   const saveBoard = useSaveBoard()
+  const deleteBoard = useDeleteBoard()
 
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null)
   const [showNewBoard, setShowNewBoard] = useState(false)
@@ -28,7 +28,7 @@ export default function WhiteBoard({ projectId }: Props) {
   const [showBoardList, setShowBoardList] = useState(false)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const currentDataRef = useRef<{ elements: readonly ExcalidrawElement[]; appState: AppState; files: BinaryFiles } | null>(null)
+  const currentDataRef = useRef<{ elements: readonly any[]; appState: any; files: any } | null>(null)
 
   const selectedBoard = boards.find(b => b.id === selectedBoardId) ?? boards[0] ?? null
 
@@ -38,7 +38,7 @@ export default function WhiteBoard({ projectId }: Props) {
     }
   }, [boards])
 
-  const handleChange = useCallback((elements: readonly ExcalidrawElement[], appState: AppState, files: BinaryFiles) => {
+  const handleChange = useCallback((elements: readonly any[], appState: any, files: any) => {
     currentDataRef.current = { elements, appState, files }
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -85,6 +85,18 @@ export default function WhiteBoard({ projectId }: Props) {
     }
   }
 
+  const handleDeleteBoard = async () => {
+    if (!selectedBoard) return
+    if (!confirm(`¿Eliminar la pizarra "${selectedBoard.name}"?`)) return
+    try {
+      await deleteBoard.mutateAsync({ id: selectedBoard.id, project_id: projectId })
+      setSelectedBoardId(null)
+      toast.success('Pizarra eliminada')
+    } catch {
+      toast.error('Error al eliminar pizarra')
+    }
+  }
+
   const handleCreateBoard = async () => {
     if (!newBoardName.trim()) return
     try {
@@ -100,7 +112,7 @@ export default function WhiteBoard({ projectId }: Props) {
 
   const initialData = selectedBoard?.excalidraw_data
     ? {
-        elements: (selectedBoard.excalidraw_data as { elements: ExcalidrawElement[] }).elements ?? [],
+        elements: (selectedBoard.excalidraw_data as { elements: any[] }).elements ?? [],
         appState: { viewBackgroundColor: '#ffffff' },
       }
     : undefined
@@ -174,6 +186,9 @@ export default function WhiteBoard({ projectId }: Props) {
           )}
           <Button size="sm" variant="outline" onClick={handleManualSave} disabled={saving || !selectedBoard}>
             <Save className="h-4 w-4" /> Guardar
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleDeleteBoard} disabled={!selectedBoard || deleteBoard.isPending} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" /> Eliminar
           </Button>
         </div>
       </div>

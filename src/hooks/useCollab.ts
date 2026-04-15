@@ -99,6 +99,18 @@ export function useSaveNote() {
   })
 }
 
+export function useDeleteBoard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, project_id }: { id: string; project_id: string }) => {
+      const { error } = await supabase.from('collab_boards').delete().eq('id', id)
+      if (error) throw error
+      return project_id
+    },
+    onSuccess: (project_id) => qc.invalidateQueries({ queryKey: ['boards', project_id] }),
+  })
+}
+
 export function useDeleteNote() {
   const qc = useQueryClient()
   return useMutation({

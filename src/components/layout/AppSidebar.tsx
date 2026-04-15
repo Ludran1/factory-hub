@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Code2, Users, Megaphone, LifeBuoy,
+  LayoutDashboard, Code2, Users, Megaphone, LifeBuoy, UserCog,
   ChevronLeft, ChevronRight, LogOut, Moon, Sun, Factory
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,11 +13,12 @@ import type { UserRole } from '@/types/database'
 import { toast } from 'sonner'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'developer', 'support', 'closer', 'marketing'] },
-  { to: '/desarrollo', icon: Code2, label: 'Desarrollo', roles: ['admin', 'developer'] },
-  { to: '/colaboracion', icon: Users, label: 'Colaboracion', roles: ['admin', 'developer', 'support', 'closer', 'marketing'] },
-  { to: '/marketing', icon: Megaphone, label: 'Marketing / CRM', roles: ['admin', 'closer', 'marketing'] },
-  { to: '/soporte', icon: LifeBuoy, label: 'Soporte', roles: ['admin', 'support'] },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', module: 'dashboard' },
+  { to: '/desarrollo', icon: Code2, label: 'Desarrollo', module: 'desarrollo' },
+  { to: '/colaboracion', icon: Users, label: 'Colaboracion', module: 'colaboracion' },
+  { to: '/marketing', icon: Megaphone, label: 'Marketing / CRM', module: 'marketing' },
+  { to: '/soporte', icon: LifeBuoy, label: 'Soporte', module: 'soporte' },
+  { to: '/usuarios', icon: UserCog, label: 'Usuarios', module: 'usuarios' },
 ] as const
 
 const roleLabels: Record<UserRole, string> = {
@@ -42,8 +43,11 @@ export default function AppSidebar() {
   const { profile, role } = useAuth()
   const navigate = useNavigate()
 
+  const modules = profile?.allowed_modules
+  const hasModuleConfig = modules && modules.length > 0
   const visibleItems = navItems.filter(item =>
-    role && (item.roles as readonly string[]).includes(role)
+    // Admin always sees everything; if no modules configured, show all; otherwise filter
+    role === 'admin' || !hasModuleConfig || modules.includes(item.module)
   )
 
   const toggleDark = () => {
