@@ -18,6 +18,7 @@ export interface Database {
           id: string
           user_id: string
           name: string
+          email: string | null
           avatar_url: string | null
           role: UserRole
           allowed_modules: string[]

@@ -44,7 +44,7 @@ export function useCreateUser() {
 
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ role: input.role, name: input.name, allowed_modules: input.allowed_modules })
+        .update({ role: input.role, name: input.name, email: input.email, allowed_modules: input.allowed_modules })
         .eq('user_id', authData.user.id)
 
       if (profileError) console.warn('Profile update:', profileError.message)
@@ -80,6 +80,15 @@ export function useUpdateUserModules() {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email)
+      if (error) throw error
+    },
   })
 }
 

@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useUsers, useUpdateUserRole, useUpdateUserModules } from '@/hooks/useUsers'
+import { useUsers, useUpdateUserRole, useUpdateUserModules, useResetPassword } from '@/hooks/useUsers'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Plus, UserPlus } from 'lucide-react'
+import { Loader2, Plus, UserPlus, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import UserModal, { ALL_MODULES } from '@/components/admin/UserModal'
 import type { UserRole } from '@/types/database'
@@ -34,7 +34,21 @@ export default function UsersPage() {
   const { data: users = [], isLoading } = useUsers()
   const updateRole = useUpdateUserRole()
   const updateModules = useUpdateUserModules()
+  const resetPassword = useResetPassword()
   const [showCreate, setShowCreate] = useState(false)
+
+  const handleResetPassword = async (email: string | null, name: string) => {
+    if (!email) {
+      toast.error(`No hay email registrado para ${name}`)
+      return
+    }
+    try {
+      await resetPassword.mutateAsync({ email })
+      toast.success(`Email de recuperación enviado a ${email}`)
+    } catch {
+      toast.error('Error al enviar email de recuperación')
+    }
+  }
 
   const handleRoleChange = async (profileId: string, role: UserRole) => {
     try {
@@ -92,6 +106,7 @@ export default function UsersPage() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Módulos</TableHead>
+                <TableHead className="w-20">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -143,6 +158,18 @@ export default function UsersPage() {
                           )
                         })}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Enviar email de recuperación de contraseña"
+                        onClick={() => handleResetPassword(user.email, user.name)}
+                        disabled={resetPassword.isPending}
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 )

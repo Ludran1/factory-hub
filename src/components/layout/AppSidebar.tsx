@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useAuthStore } from '@/store/auth'
 import type { UserRole } from '@/types/database'
 import { toast } from 'sonner'
 
@@ -55,9 +56,9 @@ export default function AppSidebar() {
     setDark(d => !d)
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    toast.success('Sesion cerrada')
+  const handleLogout = () => {
+    supabase.auth.signOut()
+    useAuthStore.getState().reset()
     navigate('/login')
   }
 
