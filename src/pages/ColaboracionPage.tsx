@@ -2,10 +2,49 @@ import { useState } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, PenLine, FileText, AlertCircle } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
+import { usePresence, type PresenceUser } from '@/hooks/usePresence'
 import WhiteBoard from '@/components/colaboracion/WhiteBoard'
 import NotesEditor from '@/components/colaboracion/NotesEditor'
+
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function PresenceBar({ users }: { users: PresenceUser[] }) {
+  if (users.length === 0) return null
+  const MAX_SHOWN = 4
+  const shown = users.slice(0, MAX_SHOWN)
+  const extra = users.length - MAX_SHOWN
+  const names = users.map(u => u.name).join(', ')
+
+  return (
+    <div className="flex items-center gap-2" title={`Viendo ahora: ${names}`}>
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+      </span>
+      <div className="flex -space-x-2">
+        {shown.map(u => (
+          <Avatar key={u.profile_id} className="h-7 w-7 border-2 border-background">
+            {u.avatar_url && <AvatarImage src={u.avatar_url} />}
+            <AvatarFallback className="text-[10px]">{getInitials(u.name)}</AvatarFallback>
+          </Avatar>
+        ))}
+        {extra > 0 && (
+          <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+            +{extra}
+          </div>
+        )}
+      </div>
+      <span className="text-xs text-muted-foreground hidden sm:inline">
+        {users.length === 1 ? '1 viendo' : `${users.length} viendo`}
+      </span>
+    </div>
+  )
+}
 
 export default function ColaboracionPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
@@ -13,6 +52,7 @@ export default function ColaboracionPage() {
 
   const activeProject = selectedProject ?? projects[0]?.id ?? null
   const currentProject = projects.find(p => p.id === activeProject)
+  const presentUsers = usePresence(activeProject)
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -23,11 +63,12 @@ export default function ColaboracionPage() {
           <p className="text-sm text-muted-foreground">Pizarra compartida y notas del equipo</p>
         </div>
 
-        {/* Project selector */}
+        {/* Presence + Project selector */}
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : projects.length > 0 ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <PresenceBar users={presentUsers} />
             <Select value={activeProject ?? ''} onValueChange={setSelectedProject}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Seleccionar proyecto" />
