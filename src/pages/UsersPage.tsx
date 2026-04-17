@@ -5,10 +5,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Plus, UserPlus, KeyRound } from 'lucide-react'
+import { Loader2, Plus, UserPlus, KeyRound, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import UserModal, { ALL_MODULES } from '@/components/admin/UserModal'
-import type { UserRole } from '@/types/database'
+import type { Database, UserRole } from '@/types/database'
+
+type Profile = Database['public']['Tables']['profiles']['Row']
 
 const roles: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -36,6 +38,7 @@ export default function UsersPage() {
   const updateModules = useUpdateUserModules()
   const resetPassword = useResetPassword()
   const [showCreate, setShowCreate] = useState(false)
+  const [editingUser, setEditingUser] = useState<Profile | null>(null)
 
   const handleResetPassword = async (email: string | null, name: string) => {
     if (!email) {
@@ -160,16 +163,27 @@ export default function UsersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Enviar email de recuperación de contraseña"
-                        onClick={() => handleResetPassword(user.email, user.name)}
-                        disabled={resetPassword.isPending}
-                      >
-                        <KeyRound className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Editar usuario"
+                          onClick={() => setEditingUser(user)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Enviar email de recuperación de contraseña"
+                          onClick={() => handleResetPassword(user.email, user.name)}
+                          disabled={resetPassword.isPending}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -180,6 +194,12 @@ export default function UsersPage() {
       )}
 
       <UserModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <UserModal
+        open={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        mode="edit"
+        user={editingUser}
+      />
     </div>
   )
 }
