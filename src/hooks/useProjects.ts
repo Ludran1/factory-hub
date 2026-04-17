@@ -5,12 +5,19 @@ export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data
+      console.log('[useProjects] queryFn START')
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: false })
+        console.log('[useProjects] queryFn END', { data, error })
+        if (error) throw error
+        return data
+      } catch (e) {
+        console.error('[useProjects] queryFn THREW', e)
+        throw e
+      }
     },
   })
 }
