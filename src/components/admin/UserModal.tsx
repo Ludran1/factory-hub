@@ -145,7 +145,10 @@ export default function UserModal({ open, onClose, mode = 'create', user = null 
           ...data,
           allowed_modules: selectedModules,
         })
-        toast.success('Usuario creado correctamente')
+        toast.success('Usuario creado', {
+          description: 'Puede que le llegue un email de confirmación antes de poder loguearse, según tu configuración de Supabase Auth.',
+          duration: 6000,
+        })
         reset()
         setSelectedModules(ALL_MODULES.map(m => m.key))
         onClose()

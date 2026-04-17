@@ -30,26 +30,39 @@ export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: { email: string; password: string; name: string; role: UserRole; allowed_modules: string[] }) => {
-      // 1. Create auth user with the isolated client
+      // Pasamos todo el contexto en raw_user_meta_data para que el trigger
+      // handle_new_user cree el profile ya con role/modules/email correctos.
+      // Sin delay ni update posterior — menos race conditions.
       const { data: authData, error: authError } = await supabaseSignUp.auth.signUp({
         email: input.email,
         password: input.password,
         options: {
-          data: { name: input.name },
+          data: {
+            name: input.name,
+            role: input.role,
+            allowed_modules: input.allowed_modules,
+          },
         },
       })
       if (authError) throw new Error(`Auth: ${authError.message}`)
       if (!authData.user) throw new Error('No se pudo crear el usuario')
 
-      // 2. Small delay for trigger to create profile, then update it
-      await new Promise(r => setTimeout(r, 1000))
-
+      // Safety net defensivo: si el trigger no se ejecutó o quedó con defaults
+      // (DB vieja sin la migración aplicada), forzamos los valores correctos.
+      await new Promise(r => setTimeout(r, 800))
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ role: input.role, name: input.name, email: input.email, allowed_modules: input.allowed_modules })
+        .update({
+          role: input.role,
+          name: input.name,
+          email: input.email,
+          allowed_modules: input.allowed_modules,
+        })
         .eq('user_id', authData.user.id)
 
-      if (profileError) console.warn('Profile update:', profileError.message)
+      if (profileError) {
+        throw new Error(`Perfil: ${profileError.message}`)
+      }
 
       return authData.user
     },
