@@ -3,11 +3,13 @@ import { supabase } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 import type { Database, UserRole } from '@/types/database'
 
-// Separate client for signUp so it doesn't overwrite the admin's session
+// Separate client for signUp so it doesn't overwrite the admin's session.
+// Needs a unique storageKey to avoid the "Multiple GoTrueClient instances" warning,
+// which can race with the main client and stall queries.
 const supabaseSignUp = createClient<Database>(
   import.meta.env.VITE_SUPABASE_URL as string,
   import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-  { auth: { persistSession: false } }
+  { auth: { persistSession: false, storageKey: 'sb-signup-only' } }
 )
 
 export function useUsers() {
