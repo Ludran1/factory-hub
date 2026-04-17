@@ -5,19 +5,20 @@ export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      console.log('[useProjects] queryFn START')
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .order('created_at', { ascending: false })
-        console.log('[useProjects] queryFn END', { data, error })
-        if (error) throw error
-        return data
-      } catch (e) {
-        console.error('[useProjects] queryFn THREW', e)
-        throw e
-      }
+      // Safeguard: si supabase-js queda colgado (token corrupto, refresh stuck, etc.)
+      // forzamos error a los 10s para que la UI muestre "Reintentar" y no spinner eterno.
+      const query = supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tiempo de espera agotado al cargar proyectos. Intenta cerrar sesión y volver a entrar.')), 10000)
+      )
+
+      const { data, error } = await Promise.race([query, timeout])
+      if (error) throw error
+      return data
     },
   })
 }
