@@ -13,9 +13,10 @@ import {
   useUpdateUserName,
   useUpdateUserRole,
   useUpdateUserModules,
+  useResetPassword,
 } from '@/hooks/useUsers'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, KeyRound } from 'lucide-react'
 import type { Database, UserRole } from '@/types/database'
 import { useEffect, useState } from 'react'
 
@@ -68,6 +69,20 @@ export default function UserModal({ open, onClose, mode = 'create', user = null 
   const updateName = useUpdateUserName()
   const updateRole = useUpdateUserRole()
   const updateModules = useUpdateUserModules()
+  const resetPassword = useResetPassword()
+
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      toast.error('Este usuario no tiene email registrado, no se puede enviar recuperación')
+      return
+    }
+    try {
+      await resetPassword.mutateAsync({ email: user.email })
+      toast.success(`Email de recuperación enviado a ${user.email}`)
+    } catch {
+      toast.error('Error al enviar email de recuperación')
+    }
+  }
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(isEdit ? editSchema : createSchema) as any,
@@ -172,14 +187,40 @@ export default function UserModal({ open, onClose, mode = 'create', user = null 
             </>
           )}
 
-          {isEdit && user?.email && (
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input value={user.email} disabled className="bg-muted/50" />
-              <p className="text-[11px] text-muted-foreground">
-                Para cambiar el email o la contraseña, usá el botón de "Recuperar contraseña" en la tabla.
-              </p>
-            </div>
+          {isEdit && (
+            <>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input
+                  value={user?.email ?? ''}
+                  placeholder="Sin email registrado"
+                  disabled
+                  className="bg-muted/50"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Para cambiar el email es necesario un flujo aparte de Supabase Auth.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Contraseña</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleResetPassword}
+                  disabled={resetPassword.isPending || !user?.email}
+                >
+                  {resetPassword.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <KeyRound className="h-4 w-4" />}
+                  Enviar email de recuperación
+                </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  Las contraseñas están hasheadas y no se pueden ver. Esto envía un link para que el usuario la cambie.
+                </p>
+              </div>
+            </>
           )}
 
           <div className="space-y-1.5">
