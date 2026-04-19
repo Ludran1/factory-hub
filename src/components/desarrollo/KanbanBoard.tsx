@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import {
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  useDroppable,
+  closestCorners,
+  type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Card, CardContent } from '@/components/ui/card'
@@ -44,7 +49,10 @@ interface KanbanCardProps {
 }
 
 function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { type: 'task', status: task.status },
+  })
 
   return (
     <div
@@ -99,6 +107,62 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
   )
 }
 
+interface ColumnProps {
+  status: TaskStatus
+  label: string
+  tasks: Task[]
+  onTaskClick: (task: Task) => void
+  onNewTask: () => void
+  isFirst: boolean
+}
+
+function Column({ status, label, tasks, onTaskClick, onNewTask, isFirst }: ColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+    data: { type: 'column', status },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex flex-col rounded-xl border bg-muted/30 p-3 min-h-[400px] transition-colors',
+        isOver && 'ring-2 ring-primary/40 bg-muted/50'
+      )}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold">{label}</h3>
+          <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
+            {tasks.length}
+          </span>
+        </div>
+        {isFirst && (
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onNewTask}>
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+
+      <SortableContext
+        items={tasks.map(t => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-col gap-2 flex-1">
+          {tasks.map(task => (
+            <KanbanCard key={task.id} task={task} onClick={onTaskClick} />
+          ))}
+          {tasks.length === 0 && (
+            <div className="flex-1 flex items-center justify-center border-2 border-dashed border-border rounded-lg min-h-[80px]">
+              <p className="text-xs text-muted-foreground">Sin tareas</p>
+            </div>
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  )
+}
+
 interface Props {
   tasks: Task[]
   onTaskClick: (task: Task) => void
@@ -125,9 +189,26 @@ export default function KanbanBoard({ tasks, onTaskClick, onNewTask }: Props) {
     const { active, over } = e
     if (!over) return
 
-    const newStatus = over.id as TaskStatus
     const task = tasks.find(t => t.id === active.id)
-    if (!task || task.status === newStatus) return
+    if (!task) return
+
+    // over puede ser una columna (status) o una tarea (buscamos su status)
+    const overData = over.data.current as { type?: string; status?: TaskStatus } | undefined
+    let newStatus: TaskStatus | undefined
+
+    if (overData?.type === 'column' && overData.status) {
+      newStatus = overData.status
+    } else if (overData?.type === 'task' && overData.status) {
+      newStatus = overData.status
+    } else {
+      // Fallback: asumir que over.id es un status (columna)
+      const maybeStatus = over.id as TaskStatus
+      if (COLUMNS.some(c => c.key === maybeStatus)) {
+        newStatus = maybeStatus
+      }
+    }
+
+    if (!newStatus || task.status === newStatus) return
 
     try {
       await updateStatus.mutateAsync({ id: task.id, status: newStatus })
@@ -137,51 +218,24 @@ export default function KanbanBoard({ tasks, onTaskClick, onNewTask }: Props) {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {COLUMNS.map(col => {
-          const colTasks = tasksByColumn(col.key)
-          return (
-            <div
-              key={col.key}
-              id={col.key}
-              className="flex flex-col rounded-xl border bg-muted/30 p-3 min-h-[400px]"
-            >
-              {/* Column header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">{col.label}</h3>
-                  <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
-                    {colTasks.length}
-                  </span>
-                </div>
-                {col.key === 'todo' && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onNewTask}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-
-              {/* Drop zone */}
-              <SortableContext
-                items={colTasks.map(t => t.id)}
-                strategy={verticalListSortingStrategy}
-                id={col.key}
-              >
-                <div className="flex flex-col gap-2 flex-1">
-                  {colTasks.map(task => (
-                    <KanbanCard key={task.id} task={task} onClick={onTaskClick} />
-                  ))}
-                  {colTasks.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center border-2 border-dashed border-border rounded-lg min-h-[80px]">
-                      <p className="text-xs text-muted-foreground">Sin tareas</p>
-                    </div>
-                  )}
-                </div>
-              </SortableContext>
-            </div>
-          )
-        })}
+        {COLUMNS.map((col, i) => (
+          <Column
+            key={col.key}
+            status={col.key}
+            label={col.label}
+            tasks={tasksByColumn(col.key)}
+            onTaskClick={onTaskClick}
+            onNewTask={onNewTask}
+            isFirst={i === 0}
+          />
+        ))}
       </div>
 
       <DragOverlay>
