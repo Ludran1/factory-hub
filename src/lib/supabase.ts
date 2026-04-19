@@ -17,7 +17,14 @@ function getClient(): SupabaseClient<Database> {
   if (typeof window !== 'undefined' && window.__supabase_client__) {
     return window.__supabase_client__
   }
-  const client = createClient<Database>(supabaseUrl, supabaseAnonKey)
+  const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+    },
+  })
   if (typeof window !== 'undefined') {
     window.__supabase_client__ = client
   }
@@ -25,3 +32,18 @@ function getClient(): SupabaseClient<Database> {
 }
 
 export const supabase = getClient()
+
+/**
+ * Borra el token de auth del localStorage si el cliente quedó en un estado
+ * inconsistente (refresh colgado, token expirado que no refresca, etc.).
+ * Llamar desde botones "Reintentar" o error boundaries para forzar re-login.
+ */
+export function clearCorruptSession() {
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+      .forEach(k => localStorage.removeItem(k))
+  } catch {
+    // ignore
+  }
+}

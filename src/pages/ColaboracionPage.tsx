@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, PenLine, FileText, AlertCircle } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
 import { usePresence, type PresenceUser } from '@/hooks/usePresence'
+import { clearCorruptSession } from '@/lib/supabase'
 import WhiteBoard from '@/components/colaboracion/WhiteBoard'
 import NotesEditor from '@/components/colaboracion/NotesEditor'
 
@@ -101,12 +102,23 @@ export default function ColaboracionPage() {
               {(error as Error)?.message ?? 'Error desconocido'}
             </p>
           </div>
-          <button
-            onClick={() => refetch()}
-            className="text-sm underline text-muted-foreground hover:text-foreground"
-          >
-            Reintentar
-          </button>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => refetch()}
+              className="text-sm underline text-muted-foreground hover:text-foreground"
+            >
+              Reintentar
+            </button>
+            <button
+              onClick={() => {
+                clearCorruptSession()
+                window.location.href = '/login'
+              }}
+              className="text-sm underline text-muted-foreground hover:text-foreground"
+            >
+              Limpiar sesión y re-login
+            </button>
+          </div>
         </div>
       )}
 
