@@ -47,18 +47,18 @@ export function useCreateUser() {
       if (authError) throw new Error(`Auth: ${authError.message}`)
       if (!authData.user) throw new Error('No se pudo crear el usuario')
 
-      // Safety net defensivo: si el trigger no se ejecutó o quedó con defaults
-      // (DB vieja sin la migración aplicada), forzamos los valores correctos.
-      await new Promise(r => setTimeout(r, 800))
+      // Upsert (INSERT si no existe, UPDATE si el trigger ya lo creó).
+      // Así funciona aunque el trigger haya fallado silenciosamente.
+      await new Promise(r => setTimeout(r, 500))
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          user_id: authData.user.id,
           role: input.role,
           name: input.name,
           email: input.email,
           allowed_modules: input.allowed_modules,
-        })
-        .eq('user_id', authData.user.id)
+        }, { onConflict: 'user_id' })
 
       if (profileError) {
         throw new Error(`Perfil: ${profileError.message}`)
