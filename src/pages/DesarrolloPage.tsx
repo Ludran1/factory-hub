@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, FolderOpen, Loader2 } from 'lucide-react'
+import { Plus, FolderOpen, Loader2, Users2 } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
 import { useObjectives } from '@/hooks/useObjectives'
 import { useTasks } from '@/hooks/useTasks'
@@ -12,12 +12,14 @@ import GanttChart from '@/components/desarrollo/GanttChart'
 import TaskModal from '@/components/desarrollo/TaskModal'
 import ObjectiveModal from '@/components/desarrollo/ObjectiveModal'
 import ProjectModal from '@/components/desarrollo/ProjectModal'
+import ProjectMembersModal from '@/components/desarrollo/ProjectMembersModal'
 
 export default function DesarrolloPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [objectiveModalOpen, setObjectiveModalOpen] = useState(false)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
+  const [membersModalOpen, setMembersModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Parameters<typeof TaskModal>[0]['task']>(null)
 
   const { data: projects = [], isLoading: loadingProjects } = useProjects()
@@ -105,6 +107,18 @@ export default function DesarrolloPage() {
               {currentProject.client}
             </Badge>
           )}
+          {activeProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setMembersModalOpen(true)}
+              title="Gestionar miembros del proyecto"
+            >
+              <Users2 className="h-4 w-4" />
+              Miembros
+            </Button>
+          )}
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
       )}
@@ -164,6 +178,12 @@ export default function DesarrolloPage() {
             onClose={() => { setTaskModalOpen(false); setEditingTask(null) }}
             objectives={objectives}
             task={editingTask}
+          />
+          <ProjectMembersModal
+            open={membersModalOpen}
+            onClose={() => setMembersModalOpen(false)}
+            projectId={activeProject}
+            projectName={currentProject?.name ?? 'Proyecto'}
           />
         </>
       )}

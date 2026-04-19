@@ -9,6 +9,7 @@ export type TicketStatus = 'Abierto' | 'En Revisión' | 'Resuelto'
 export type LeadStage = 'prospecto' | 'demo' | 'negociacion' | 'cerrado'
 export type LeadSource = 'referido' | 'cold_outreach' | 'sitio_web' | 'evento' | 'redes_sociales' | 'otro'
 export type ActivityType = 'llamada' | 'reunion' | 'email' | 'nota'
+export type ProjectMemberRole = 'owner' | 'contributor'
 
 export interface Database {
   public: {
@@ -39,6 +40,18 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['projects']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['projects']['Insert']>
+        Relationships: []
+      }
+      project_members: {
+        Row: {
+          id: string
+          project_id: string
+          profile_id: string
+          role: ProjectMemberRole
+          added_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['project_members']['Row'], 'id' | 'added_at'>
+        Update: Partial<Database['public']['Tables']['project_members']['Insert']>
         Relationships: []
       }
       objectives: {

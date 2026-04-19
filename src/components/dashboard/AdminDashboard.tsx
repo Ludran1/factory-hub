@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import StatCard from './StatCard'
+import ProjectTeams from './ProjectTeams'
 import { useAdminDashboard } from '@/hooks/useDashboard'
 import { Loader2 } from 'lucide-react'
 
@@ -76,6 +77,9 @@ export default function AdminDashboard() {
           color="default"
         />
       </div>
+
+      {/* Equipos por proyecto */}
+      <ProjectTeams />
 
       {/* Team members */}
       <Card>
