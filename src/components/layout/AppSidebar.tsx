@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from '@/hooks/useTheme'
 import { useAuthStore } from '@/store/auth'
 import type { UserRole } from '@/types/database'
 import { toast } from 'sonner'
@@ -40,7 +41,8 @@ const roleColors: Record<UserRole, string> = {
 
 export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
-  const [dark, setDark] = useState(false)
+  const { theme, toggle: toggleDark } = useTheme()
+  const dark = theme === 'dark'
   const { profile, role } = useAuth()
   const navigate = useNavigate()
 
@@ -50,11 +52,6 @@ export default function AppSidebar() {
     // Admin always sees everything; if no modules configured, show all; otherwise filter
     role === 'admin' || !hasModuleConfig || modules.includes(item.module)
   )
-
-  const toggleDark = () => {
-    document.documentElement.classList.toggle('dark')
-    setDark(d => !d)
-  }
 
   const handleLogout = () => {
     supabase.auth.signOut()
