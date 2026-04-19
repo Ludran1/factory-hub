@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/auth'
 
 export function useProjects() {
+  const user = useAuthStore(s => s.user)
   return useQuery({
     queryKey: ['projects'],
+    enabled: !!user,
     queryFn: async () => {
-      // Safeguard: si supabase-js queda colgado (token corrupto, refresh stuck, etc.)
-      // forzamos error a los 10s para que la UI muestre "Reintentar" y no spinner eterno.
       const query = supabase
         .from('projects')
         .select('*')
