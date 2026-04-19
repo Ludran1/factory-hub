@@ -104,42 +104,40 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
             {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Prioridad</Label>
-              <Select value={watch('priority')} onValueChange={(v) => setValue('priority', v as FormData['priority'])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(['urgente', 'alta', 'media', 'baja'] as const).map(p => (
-                    <SelectItem key={p} value={p}>
-                      <span className={priorityColors[p]}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label>Objetivo</Label>
+            <Select value={watch('objective_id')} onValueChange={(v) => setValue('objective_id', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {objectives.map(obj => (
+                  <SelectItem key={obj.id} value={obj.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ background: obj.color }} />
+                      <span className="truncate">{obj.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.objective_id && <p className="text-xs text-destructive">{errors.objective_id.message}</p>}
+          </div>
 
-            <div className="space-y-1.5">
-              <Label>Objetivo</Label>
-              <Select value={watch('objective_id')} onValueChange={(v) => setValue('objective_id', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {objectives.map(obj => (
-                    <SelectItem key={obj.id} value={obj.id}>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ background: obj.color }} />
-                        {obj.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.objective_id && <p className="text-xs text-destructive">{errors.objective_id.message}</p>}
-            </div>
+          <div className="space-y-1.5">
+            <Label>Prioridad</Label>
+            <Select value={watch('priority')} onValueChange={(v) => setValue('priority', v as FormData['priority'])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(['urgente', 'alta', 'media', 'baja'] as const).map(p => (
+                  <SelectItem key={p} value={p}>
+                    <span className={priorityColors[p]}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">

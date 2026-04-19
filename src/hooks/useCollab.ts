@@ -34,18 +34,22 @@ export function useCreateBoard() {
 }
 
 export function useSaveBoard() {
-  const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, excalidraw_data, updated_by, project_id }: {
+    mutationFn: async ({ id, excalidraw_data, updated_by }: {
       id: string; excalidraw_data: object; updated_by: string; project_id: string
     }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('collab_boards')
         .update({ excalidraw_data, updated_by, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .select()
       if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo guardar: RLS bloqueó el update o la pizarra no existe')
+      }
+      return data[0]
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['boards', vars.project_id] }),
+    // No invalidamos para no forzar refetch mientras el usuario sigue dibujando
   })
 }
 

@@ -55,8 +55,8 @@ export default function WhiteBoard({ projectId }: Props) {
             appState: { viewBackgroundColor: appState.viewBackgroundColor },
           },
         })
-      } catch {
-        // silent auto-save failure
+      } catch (err: any) {
+        toast.error(`No se pudo guardar: ${err?.message ?? 'error desconocido'}`)
       } finally {
         setSaving(false)
       }

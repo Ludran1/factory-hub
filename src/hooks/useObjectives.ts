@@ -8,7 +8,7 @@ export function useObjectives(projectId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('objectives')
-        .select(`*, tasks(id, status)`)
+        .select(`*, tasks(id, title, status, priority, assignee:profiles(id, name, avatar_url))`)
         .eq('project_id', projectId!)
         .order('start_date', { ascending: true })
       if (error) throw error

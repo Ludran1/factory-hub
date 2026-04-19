@@ -26,6 +26,21 @@ export function useUsers() {
   })
 }
 
+/** Devuelve todos los perfiles (id, name, avatar_url, role) — útil para selectors de asignación */
+export function useAllProfiles() {
+  return useQuery({
+    queryKey: ['profiles', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url, role')
+        .order('name')
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}
+
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({

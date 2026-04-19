@@ -133,13 +133,19 @@ export function useClosers() {
   return useQuery({
     queryKey: ['closers'],
     queryFn: async () => {
+      // Mostramos cualquier usuario que tenga acceso al módulo marketing,
+      // sin importar el rol — así el admin puede asignar leads a quien quiera.
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, avatar_url')
-        .in('role', ['closer', 'admin'])
+        .select('id, name, avatar_url, role, allowed_modules')
         .order('name')
       if (error) throw error
-      return data
+      return (data ?? []).filter(p =>
+        p.role === 'admin' ||
+        p.role === 'closer' ||
+        p.role === 'marketing' ||
+        (Array.isArray(p.allowed_modules) && p.allowed_modules.includes('marketing'))
+      )
     },
   })
 }
