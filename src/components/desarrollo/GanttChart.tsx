@@ -8,7 +8,7 @@ import {
   startOfWeek, endOfWeek,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
 import { toast } from 'sonner'
 
@@ -33,6 +33,7 @@ interface Objective {
 interface Props {
   objectives: Objective[]
   onNewObjective: () => void
+  onEditObjective?: (obj: Objective) => void
 }
 
 function getProgress(tasks: Task[]) {
@@ -74,7 +75,7 @@ const objStatusLabel: Record<string, string> = {
   completado: 'Completado',
 }
 
-export default function GanttChart({ objectives }: Props) {
+export default function GanttChart({ objectives, onEditObjective }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null)
   const updateStatus = useUpdateTaskStatus()
@@ -163,7 +164,17 @@ export default function GanttChart({ objectives }: Props) {
               {/* Objective row */}
               <div className="flex hover:bg-muted/20 transition-colors">
                 {/* Info column */}
-                <div className="w-80 shrink-0 px-3 py-3 border-r">
+                <div className="w-80 shrink-0 px-3 py-3 border-r relative group/obj">
+                  {onEditObjective && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onEditObjective(obj) }}
+                      title="Editar objetivo"
+                      className="absolute top-2 right-2 z-10 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover/obj:opacity-100 transition-opacity"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => toggleExpanded(obj.id)}

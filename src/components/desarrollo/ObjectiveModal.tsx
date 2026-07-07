@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DatePicker } from '@/components/ui/date-picker'
-import { useCreateObjective } from '@/hooks/useObjectives'
+import { useCreateObjective, useUpdateObjective, useDeleteObjective } from '@/hooks/useObjectives'
+import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6']
@@ -21,14 +22,26 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
+export interface EditableObjective {
+  id: string
+  name: string
+  color: string
+  start_date: string
+  end_date: string
+}
+
 interface Props {
   open: boolean
   onClose: () => void
   projectId: string
+  objective?: EditableObjective | null
 }
 
-export default function ObjectiveModal({ open, onClose, projectId }: Props) {
+export default function ObjectiveModal({ open, onClose, projectId, objective = null }: Props) {
   const createObjective = useCreateObjective()
+  const updateObjective = useUpdateObjective()
+  const deleteObjective = useDeleteObjective()
+  const isEdit = !!objective
 
   const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -36,16 +49,43 @@ export default function ObjectiveModal({ open, onClose, projectId }: Props) {
   })
 
   useEffect(() => {
-    if (open) reset({ color: COLORS[0] })
-  }, [open])
+    if (!open) return
+    if (objective) {
+      reset({
+        name: objective.name,
+        start_date: objective.start_date,
+        end_date: objective.end_date,
+        color: objective.color,
+      })
+    } else {
+      reset({ name: '', start_date: '', end_date: '', color: COLORS[0] })
+    }
+  }, [open, objective])
 
   const onSubmit = async (data: FormData) => {
     try {
-      await createObjective.mutateAsync({ ...data, project_id: projectId })
-      toast.success('Objetivo creado')
+      if (isEdit) {
+        await updateObjective.mutateAsync({ id: objective!.id, ...data })
+        toast.success('Objetivo actualizado')
+      } else {
+        await createObjective.mutateAsync({ ...data, project_id: projectId })
+        toast.success('Objetivo creado')
+      }
       onClose()
     } catch {
-      toast.error('Error al crear el objetivo')
+      toast.error(isEdit ? 'Error al actualizar el objetivo' : 'Error al crear el objetivo')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!objective) return
+    if (!confirm(`¿Eliminar el objetivo "${objective.name}" y todas sus tareas?`)) return
+    try {
+      await deleteObjective.mutateAsync({ id: objective.id, project_id: projectId })
+      toast.success('Objetivo eliminado')
+      onClose()
+    } catch {
+      toast.error('Error al eliminar el objetivo')
     }
   }
 
@@ -53,7 +93,7 @@ export default function ObjectiveModal({ open, onClose, projectId }: Props) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuevo objetivo</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar objetivo' : 'Nuevo objetivo'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
@@ -107,11 +147,25 @@ export default function ObjectiveModal({ open, onClose, projectId }: Props) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" size="sm" disabled={createObjective.isPending}>
-              Crear objetivo
-            </Button>
+          <div className="flex items-center justify-between gap-2 pt-2">
+            {isEdit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                disabled={deleteObjective.isPending}
+              >
+                <Trash2 className="h-4 w-4" /> Eliminar
+              </Button>
+            ) : <span />}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+              <Button type="submit" size="sm" disabled={createObjective.isPending || updateObjective.isPending}>
+                {isEdit ? 'Guardar cambios' : 'Crear objetivo'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

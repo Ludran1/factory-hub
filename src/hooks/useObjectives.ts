@@ -38,11 +38,30 @@ export function useCreateObjective() {
 export function useUpdateObjective() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; status?: string; name?: string }) => {
+    mutationFn: async ({ id, ...updates }: {
+      id: string
+      status?: string
+      name?: string
+      color?: string
+      start_date?: string
+      end_date?: string
+    }) => {
       const { data, error } = await supabase.from('objectives').update(updates).eq('id', id).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (data) => qc.invalidateQueries({ queryKey: ['objectives', data.project_id] }),
+  })
+}
+
+export function useDeleteObjective() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, project_id }: { id: string; project_id: string }) => {
+      const { error } = await supabase.from('objectives').delete().eq('id', id)
+      if (error) throw error
+      return project_id
+    },
+    onSuccess: (project_id) => qc.invalidateQueries({ queryKey: ['objectives', project_id] }),
   })
 }

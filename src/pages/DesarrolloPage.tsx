@@ -18,6 +18,7 @@ export default function DesarrolloPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [objectiveModalOpen, setObjectiveModalOpen] = useState(false)
+  const [editingObjective, setEditingObjective] = useState<Parameters<typeof ObjectiveModal>[0]['objective']>(null)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [membersModalOpen, setMembersModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Parameters<typeof TaskModal>[0]['task']>(null)
@@ -119,7 +120,7 @@ export default function DesarrolloPage() {
               <TabsTrigger value="kanban">Kanban</TabsTrigger>
               <TabsTrigger value="gantt">Gantt</TabsTrigger>
             </TabsList>
-            <Button variant="outline" size="sm" onClick={() => setObjectiveModalOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => { setEditingObjective(null); setObjectiveModalOpen(true) }}>
               <Plus className="h-4 w-4" />
               Nuevo objetivo
             </Button>
@@ -151,7 +152,17 @@ export default function DesarrolloPage() {
             ) : (
               <GanttChart
                 objectives={objectives as Parameters<typeof GanttChart>[0]['objectives']}
-                onNewObjective={() => setObjectiveModalOpen(true)}
+                onNewObjective={() => { setEditingObjective(null); setObjectiveModalOpen(true) }}
+                onEditObjective={(obj) => {
+                  setEditingObjective({
+                    id: obj.id,
+                    name: obj.name,
+                    color: obj.color,
+                    start_date: obj.start_date,
+                    end_date: obj.end_date,
+                  })
+                  setObjectiveModalOpen(true)
+                }}
               />
             )}
           </TabsContent>
@@ -168,8 +179,9 @@ export default function DesarrolloPage() {
         <>
           <ObjectiveModal
             open={objectiveModalOpen}
-            onClose={() => setObjectiveModalOpen(false)}
+            onClose={() => { setObjectiveModalOpen(false); setEditingObjective(null) }}
             projectId={activeProject}
+            objective={editingObjective}
           />
           <TaskModal
             open={taskModalOpen}
