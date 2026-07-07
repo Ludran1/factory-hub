@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useCreateObjective, useUpdateObjective, useDeleteObjective } from '@/hooks/useObjectives'
 import { Trash2 } from 'lucide-react'
+import { format } from 'date-fns'
 import { toast } from 'sonner'
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6']
@@ -58,7 +59,7 @@ export default function ObjectiveModal({ open, onClose, projectId, objective = n
         color: objective.color,
       })
     } else {
-      reset({ name: '', start_date: '', end_date: '', color: COLORS[0] })
+      reset({ name: '', start_date: format(new Date(), 'yyyy-MM-dd'), end_date: '', color: COLORS[0] })
     }
   }, [open, objective])
 
