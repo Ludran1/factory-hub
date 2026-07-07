@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import {
   differenceInDays, parseISO, format, eachWeekOfInterval,
-  startOfWeek, endOfWeek,
+  startOfWeek, endOfWeek, addDays,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react'
@@ -112,10 +112,13 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
     )
   }
 
-  // Rango total de fechas
+  // Rango total de fechas, con padding para que se vea inicio y fin de cada
+  // objetivo dentro del timeline (y la regla muestre la semana donde acaba).
   const allDates = objectives.flatMap(o => [parseISO(o.start_date), parseISO(o.end_date)])
-  const minDate = new Date(Math.min(...allDates.map(d => d.getTime())))
-  const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())))
+  const rawMin = new Date(Math.min(...allDates.map(d => d.getTime())))
+  const rawMax = new Date(Math.max(...allDates.map(d => d.getTime())))
+  const minDate = addDays(rawMin, -7)
+  const maxDate = addDays(rawMax, 14)
 
   // Semanas de lunes a domingo (consistente con locale es del resto de la app)
   const weekStart = (d: Date) => startOfWeek(d, { weekStartsOn: 1 })
@@ -237,6 +240,13 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                         {format(parseISO(obj.start_date), 'd MMM', { locale: es })} — {format(parseISO(obj.end_date), 'd MMM', { locale: es })}
                       </span>
                     </div>
+                    {/* Fecha fin visible junto al extremo derecho de la barra */}
+                    <span
+                      className="absolute top-1/2 -translate-y-1/2 text-[10px] font-medium whitespace-nowrap pl-1.5"
+                      style={{ left: `calc(${bar.left} + ${bar.width})`, color: obj.color }}
+                    >
+                      {format(parseISO(obj.end_date), 'd MMM', { locale: es })}
+                    </span>
                   </div>
                 </div>
               </div>
