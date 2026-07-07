@@ -8,7 +8,7 @@ export function useBoards(projectId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('collab_boards')
-        .select('*')
+        .select('*, updater:profiles(id, name)')
         .eq('project_id', projectId!)
         .order('updated_at', { ascending: false })
       if (error) throw error

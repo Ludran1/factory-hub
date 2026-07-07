@@ -122,7 +122,7 @@ export default function NotesEditor({ projectId }: Props) {
   }
 
   return (
-    <div className="flex gap-4 h-[640px]">
+    <div className="flex gap-4 h-[calc(100vh-15rem)] min-h-[640px]">
       {/* Sidebar — note list */}
       <div className="w-56 shrink-0 flex flex-col gap-1 border rounded-xl p-2 overflow-y-auto">
         <div className="flex items-center justify-between px-1 py-1 mb-1">
