@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useLead, useUpdateLead, useAddLeadActivity, useAddLeadTask, useToggleLeadTask } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -139,7 +139,7 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                 {lead.expected_close_date && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5 shrink-0" />
-                    <span>{format(new Date(lead.expected_close_date), 'dd MMM yyyy', { locale: es })}</span>
+                    <span>{format(parseISO(lead.expected_close_date), 'dd MMM yyyy', { locale: es })}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -190,7 +190,7 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                       </span>
                       {task.due_date && (
                         <span className="text-[10px] text-muted-foreground">
-                          {format(new Date(task.due_date), 'dd MMM', { locale: es })}
+                          {format(parseISO(task.due_date), 'dd MMM', { locale: es })}
                         </span>
                       )}
                     </div>

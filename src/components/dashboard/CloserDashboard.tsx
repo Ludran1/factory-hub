@@ -5,7 +5,7 @@ import StatCard from './StatCard'
 import { useCloserDashboard } from '@/hooks/useDashboard'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const stageColors: Record<string, string> = {
@@ -116,7 +116,7 @@ export default function CloserDashboard() {
                 </div>
                 {task.due_date && (
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {format(new Date(task.due_date), 'd MMM', { locale: es })}
+                    {format(parseISO(task.due_date), 'd MMM', { locale: es })}
                   </span>
                 )}
               </div>
