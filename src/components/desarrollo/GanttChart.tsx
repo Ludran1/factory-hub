@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import {
-  differenceInDays, parseISO, format, eachWeekOfInterval,
+  differenceInDays, parseISO, format, eachWeekOfInterval, eachDayOfInterval,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -124,15 +124,25 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
   const weekStart = (d: Date) => startOfWeek(d, { weekStartsOn: 1 })
   const weekEnd = (d: Date) => endOfWeek(d, { weekStartsOn: 1 })
 
-  const weeks = eachWeekOfInterval({ start: weekStart(minDate), end: weekEnd(maxDate) }, { weekStartsOn: 1 })
-  const totalDays = differenceInDays(weekEnd(maxDate), weekStart(minDate)) || 1
+  // Granularidad adaptativa: rangos cortos muestran días individuales; los largos,
+  // semanas (evita cientos de columnas ilegibles en proyectos de meses).
+  const spanDays = differenceInDays(maxDate, minDate)
+  const useDays = spanDays <= 45
+
+  const origin = useDays ? minDate : weekStart(minDate)
+  const finish = useDays ? maxDate : weekEnd(maxDate)
+  const totalDays = differenceInDays(finish, origin) || 1
+
+  const columns = useDays
+    ? eachDayOfInterval({ start: origin, end: finish })
+    : eachWeekOfInterval({ start: origin, end: finish }, { weekStartsOn: 1 })
 
   const getBarStyle = (obj: Objective) => {
-    const start = differenceInDays(parseISO(obj.start_date), weekStart(minDate))
+    const start = differenceInDays(parseISO(obj.start_date), origin)
     const duration = differenceInDays(parseISO(obj.end_date), parseISO(obj.start_date))
     const left = (start / totalDays) * 100
     const width = (duration / totalDays) * 100
-    return { left: `${left}%`, width: `${Math.max(width, 3)}%` }
+    return { left: `${left}%`, width: `${Math.max(width, useDays ? 1.5 : 3)}%` }
   }
 
   return (
@@ -145,12 +155,19 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
           </div>
           <div className="flex-1 relative min-w-0">
             <div className="flex">
-              {weeks.map((week, i) => (
+              {columns.map((col, i) => (
                 <div
                   key={i}
-                  className="flex-1 px-1 py-2 text-xs text-muted-foreground border-r last:border-r-0 text-center"
+                  className={cn(
+                    'flex-1 px-0.5 py-2 text-muted-foreground border-r last:border-r-0 text-center',
+                    useDays ? 'text-[10px]' : 'text-xs'
+                  )}
                 >
-                  {format(week, 'dd MMM', { locale: es })}
+                  {useDays
+                    ? (col.getDate() === 1 || i === 0
+                        ? format(col, 'd MMM', { locale: es })
+                        : format(col, 'd', { locale: es }))
+                    : format(col, 'dd MMM', { locale: es })}
                 </div>
               ))}
             </div>
@@ -222,7 +239,7 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                 {/* Timeline column */}
                 <div className="flex-1 relative py-4 px-1 min-w-0">
                   <div className="absolute inset-0 flex pointer-events-none">
-                    {weeks.map((_, i) => (
+                    {columns.map((_, i) => (
                       <div key={i} className="flex-1 border-r border-border/40 last:border-r-0" />
                     ))}
                   </div>
