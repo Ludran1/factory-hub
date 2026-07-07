@@ -117,11 +117,15 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
   const minDate = new Date(Math.min(...allDates.map(d => d.getTime())))
   const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())))
 
-  const weeks = eachWeekOfInterval({ start: startOfWeek(minDate), end: endOfWeek(maxDate) })
-  const totalDays = differenceInDays(endOfWeek(maxDate), startOfWeek(minDate)) || 1
+  // Semanas de lunes a domingo (consistente con locale es del resto de la app)
+  const weekStart = (d: Date) => startOfWeek(d, { weekStartsOn: 1 })
+  const weekEnd = (d: Date) => endOfWeek(d, { weekStartsOn: 1 })
+
+  const weeks = eachWeekOfInterval({ start: weekStart(minDate), end: weekEnd(maxDate) }, { weekStartsOn: 1 })
+  const totalDays = differenceInDays(weekEnd(maxDate), weekStart(minDate)) || 1
 
   const getBarStyle = (obj: Objective) => {
-    const start = differenceInDays(parseISO(obj.start_date), startOfWeek(minDate))
+    const start = differenceInDays(parseISO(obj.start_date), weekStart(minDate))
     const duration = differenceInDays(parseISO(obj.end_date), parseISO(obj.start_date))
     const left = (start / totalDays) * 100
     const width = (duration / totalDays) * 100
