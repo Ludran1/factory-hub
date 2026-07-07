@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'developer' | 'support' | 'closer' | 'marketing'
 
-export type TaskPriority = 'urgente' | 'alta' | 'media' | 'baja'
+export type TaskPriority = 'urgente' | 'importante' | 'alta' | 'media' | 'baja' | 'delegar'
 export type TaskStatus = 'todo' | 'in_progress' | 'code_review' | 'done'
 
 export type TicketPriority = 'urgente' | 'alta' | 'media' | 'baja'

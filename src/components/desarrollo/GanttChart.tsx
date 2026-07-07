@@ -47,9 +47,11 @@ function getInitials(name: string) {
 
 const priorityColor: Record<string, string> = {
   urgente: 'bg-red-500/10 text-red-600 border-red-500/30',
+  importante: 'bg-pink-500/10 text-pink-600 border-pink-500/30',
   alta: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
   media: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
   baja: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
+  delegar: 'bg-sky-500/10 text-sky-600 border-sky-500/30',
 }
 
 const statusLabel: Record<string, string> = {

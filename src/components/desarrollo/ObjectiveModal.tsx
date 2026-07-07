@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import { useCreateObjective } from '@/hooks/useObjectives'
 import { toast } from 'sonner'
 
@@ -29,7 +30,7 @@ interface Props {
 export default function ObjectiveModal({ open, onClose, projectId }: Props) {
   const createObjective = useCreateObjective()
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { color: COLORS[0] },
   })
@@ -64,12 +65,24 @@ export default function ObjectiveModal({ open, onClose, projectId }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Fecha inicio</Label>
-              <Input type="date" {...register('start_date')} />
+              <Controller
+                control={control}
+                name="start_date"
+                render={({ field }) => (
+                  <DatePicker value={field.value} onChange={field.onChange} />
+                )}
+              />
               {errors.start_date && <p className="text-xs text-destructive">{errors.start_date.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Fecha fin</Label>
-              <Input type="date" {...register('end_date')} />
+              <Controller
+                control={control}
+                name="end_date"
+                render={({ field }) => (
+                  <DatePicker value={field.value} onChange={field.onChange} />
+                )}
+              />
               {errors.end_date && <p className="text-xs text-destructive">{errors.end_date.message}</p>}
             </div>
           </div>

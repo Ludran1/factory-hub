@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCreateLead, useUpdateLead, useClosers } from '@/hooks/useLeads'
@@ -57,7 +58,7 @@ export default function LeadModal({ open, onClose, lead }: Props) {
   const updateLead = useUpdateLead()
   const { data: closers = [] } = useClosers()
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { stage: 'prospecto', source: 'otro', value: 0 },
   })
@@ -183,7 +184,13 @@ export default function LeadModal({ open, onClose, lead }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label>Cierre estimado</Label>
-              <Input type="date" {...register('expected_close_date')} />
+              <Controller
+                control={control}
+                name="expected_close_date"
+                render={({ field }) => (
+                  <DatePicker value={field.value} onChange={field.onChange} />
+                )}
+              />
             </div>
           </div>
 

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Phone, Mail, DollarSign, Calendar, User, Pencil,
   Phone as PhoneIcon, Users, AtSign, FileText, Plus,
@@ -203,11 +204,11 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                     className="h-8 text-sm flex-1"
                     onKeyDown={e => { if (e.key === 'Enter') handleAddTask() }}
                   />
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={taskDue}
-                    onChange={e => setTaskDue(e.target.value)}
-                    className="h-8 text-sm w-32"
+                    onChange={setTaskDue}
+                    placeholder="Fecha"
+                    className="h-8 text-sm w-36"
                   />
                   <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" onClick={handleAddTask}>
                     <Plus className="h-3.5 w-3.5" />

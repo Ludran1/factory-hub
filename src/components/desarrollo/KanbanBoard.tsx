@@ -25,10 +25,12 @@ const COLUMNS: { key: TaskStatus; label: string }[] = [
 ]
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
-  urgente: { color: 'text-red-500', label: 'Urgente' },
-  alta:    { color: 'text-orange-500', label: 'Alta' },
-  media:   { color: 'text-yellow-500', label: 'Media' },
-  baja:    { color: 'text-slate-400', label: 'Baja' },
+  urgente:    { color: 'text-red-500', label: 'Urgente' },
+  importante: { color: 'text-pink-500', label: 'Importante' },
+  alta:       { color: 'text-orange-500', label: 'Alta' },
+  media:      { color: 'text-yellow-500', label: 'Media' },
+  baja:       { color: 'text-slate-400', label: 'Baja' },
+  delegar:    { color: 'text-sky-500', label: 'Delegar' },
 }
 
 interface Task {

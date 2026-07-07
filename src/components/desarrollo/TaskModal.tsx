@@ -13,7 +13,7 @@ import { Trash2 } from 'lucide-react'
 
 const schema = z.object({
   title: z.string().min(1, 'Requerido'),
-  priority: z.enum(['urgente', 'alta', 'media', 'baja']),
+  priority: z.enum(['urgente', 'importante', 'alta', 'media', 'baja', 'delegar']),
   objective_id: z.string().min(1, 'Requerido'),
   assignee_id: z.string().optional(),
 })
@@ -35,9 +35,11 @@ interface Props {
 
 const priorityColors: Record<string, string> = {
   urgente: 'text-red-500',
+  importante: 'text-pink-500',
   alta: 'text-orange-500',
   media: 'text-yellow-500',
   baja: 'text-slate-400',
+  delegar: 'text-sky-500',
 }
 
 export default function TaskModal({ open, onClose, objectives, task }: Props) {
@@ -131,7 +133,7 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(['urgente', 'alta', 'media', 'baja'] as const).map(p => (
+                {(['urgente', 'importante', 'alta', 'media', 'baja', 'delegar'] as const).map(p => (
                   <SelectItem key={p} value={p}>
                     <span className={priorityColors[p]}>{p.charAt(0).toUpperCase() + p.slice(1)}</span>
                   </SelectItem>
