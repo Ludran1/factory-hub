@@ -55,18 +55,6 @@ export default function DesarrolloPage() {
             <FolderOpen className="h-4 w-4" />
             Nuevo proyecto
           </Button>
-          {activeProject && (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setObjectiveModalOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Nuevo objetivo
-              </Button>
-              <Button size="sm" onClick={handleNewTask}>
-                <Plus className="h-4 w-4" />
-                Nueva tarea
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
@@ -126,10 +114,20 @@ export default function DesarrolloPage() {
       {/* Tabs */}
       {activeProject && (
         <Tabs defaultValue="kanban">
-          <TabsList>
-            <TabsTrigger value="kanban">Kanban</TabsTrigger>
-            <TabsTrigger value="gantt">Gantt</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <TabsList>
+              <TabsTrigger value="kanban">Kanban</TabsTrigger>
+              <TabsTrigger value="gantt">Gantt</TabsTrigger>
+            </TabsList>
+            <Button variant="outline" size="sm" onClick={() => setObjectiveModalOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nuevo objetivo
+            </Button>
+            <Button size="sm" onClick={handleNewTask}>
+              <Plus className="h-4 w-4" />
+              Nueva tarea
+            </Button>
+          </div>
 
           <TabsContent value="kanban">
             {loadingTasks ? (
