@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { format, parse, isValid } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
@@ -24,10 +25,11 @@ function toDate(value?: string): Date | undefined {
 }
 
 export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', disabled, className }: Props) {
+  const [open, setOpen] = useState(false)
   const selected = toDate(value)
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -48,7 +50,10 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', disabl
           mode="single"
           selected={selected}
           defaultMonth={selected}
-          onSelect={d => onChange(d ? format(d, 'yyyy-MM-dd') : '')}
+          onSelect={d => {
+            onChange(d ? format(d, 'yyyy-MM-dd') : '')
+            if (d) setOpen(false)
+          }}
         />
       </PopoverContent>
     </Popover>
