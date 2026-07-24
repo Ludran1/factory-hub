@@ -363,10 +363,13 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                                   {statusLabel[task.status] ?? task.status}
                                 </span>
                                 {task.assignee && (
-                                  <Avatar className="h-4 w-4" title={task.assignee.name}>
-                                    {task.assignee.avatar_url && <AvatarImage src={task.assignee.avatar_url} />}
-                                    <AvatarFallback className="text-[8px]">{getInitials(task.assignee.name)}</AvatarFallback>
-                                  </Avatar>
+                                  <span className="flex items-center gap-1 min-w-0">
+                                    <Avatar className="h-4 w-4 shrink-0">
+                                      {task.assignee.avatar_url && <AvatarImage src={task.assignee.avatar_url} />}
+                                      <AvatarFallback className="text-[8px]">{getInitials(task.assignee.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-[10px] text-muted-foreground truncate">{task.assignee.name}</span>
+                                  </span>
                                 )}
                                 <TaskTimer
                                   taskId={task.id}

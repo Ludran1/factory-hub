@@ -119,12 +119,17 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
               )}
               <Circle className={cn('h-2 w-2 fill-current', priorityConfig[task.priority]?.color)} />
               {task.assignee && (
-                <Avatar className="h-5 w-5">
-                  <AvatarImage src={task.assignee.avatar_url ?? undefined} />
-                  <AvatarFallback className="text-[10px]">
-                    {task.assignee.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <span className="flex items-center gap-1 min-w-0">
+                  <Avatar className="h-5 w-5 shrink-0">
+                    <AvatarImage src={task.assignee.avatar_url ?? undefined} />
+                    <AvatarFallback className="text-[10px]">
+                      {task.assignee.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-[11px] text-muted-foreground truncate max-w-[9rem]">
+                    {task.assignee.name}
+                  </span>
+                </span>
               )}
             </div>
           </div>
