@@ -337,7 +337,7 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
 
                             <div className="flex-1 min-w-0">
                               <p className={cn(
-                                'text-sm truncate',
+                                'text-sm break-words',
                                 done && 'line-through text-muted-foreground'
                               )}>
                                 {task.title ?? '(sin título)'}
