@@ -137,22 +137,29 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
 
   const origin = useDays ? minDate : weekStart(minDate)
   const finish = useDays ? maxDate : weekEnd(maxDate)
-  const totalDays = differenceInDays(finish, origin) || 1
 
   const columns = useDays
     ? eachDayOfInterval({ start: origin, end: finish })
     : eachWeekOfInterval({ start: origin, end: finish }, { weekStartsOn: 1 })
 
-  // Posición de la línea "hoy" (centrada en el día actual)
+  // Ancho continuo del timeline en días: debe coincidir con lo que dibuja la
+  // grilla (N columnas de 1 día o de 1 semana), no con finish - origin, que
+  // tiene 1 día menos y corría todos los marcadores hacia la derecha.
+  const totalDays = columns.length * (useDays ? 1 : 7)
+
+  // Centro del día `d` como % del timeline
+  const dayPos = (d: Date) => ((differenceInDays(d, origin) + 0.5) / totalDays) * 100
+
+  // Posición de la línea "hoy"
   const todayOffset = differenceInDays(today, origin)
-  const todayPos = ((todayOffset + 0.5) / totalDays) * 100
-  const showToday = todayOffset >= 0 && todayOffset <= totalDays
+  const todayPos = dayPos(today)
+  const showToday = todayOffset >= 0 && todayOffset < totalDays
 
   const getBarStyle = (obj: Objective) => {
     const start = differenceInDays(parseISO(obj.start_date), origin)
-    const duration = differenceInDays(parseISO(obj.end_date), parseISO(obj.start_date))
+    const days = differenceInDays(parseISO(obj.end_date), parseISO(obj.start_date)) + 1
     const left = (start / totalDays) * 100
-    const width = (duration / totalDays) * 100
+    const width = (days / totalDays) * 100
     return { left: `${left}%`, width: `${Math.max(width, useDays ? 1.5 : 3)}%` }
   }
 
@@ -300,7 +307,7 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                       const done = task.status === 'done'
                       const isLoading = pendingTaskId === task.id
                       const duePos = task.due_date
-                        ? Math.min(100, Math.max(0, (differenceInDays(parseISO(task.due_date), origin) / totalDays) * 100))
+                        ? Math.min(100, Math.max(0, dayPos(parseISO(task.due_date))))
                         : null
                       const overdue = !done && !!task.due_date && task.due_date < format(new Date(), 'yyyy-MM-dd')
                       const dueLabelLeft = duePos !== null && duePos > 88
