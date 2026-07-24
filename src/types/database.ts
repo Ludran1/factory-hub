@@ -78,6 +78,8 @@ export interface Database {
           status: TaskStatus
           assignee_id: string | null
           due_date: string | null
+          time_spent_seconds: number
+          timer_started_at: string | null
           created_at: string
           updated_at: string
         }

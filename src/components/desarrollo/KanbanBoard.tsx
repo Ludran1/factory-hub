@@ -15,6 +15,7 @@ import { GripVertical, Plus, Circle, CalendarDays } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
+import TaskTimer from './TaskTimer'
 import { cn } from '@/lib/utils'
 import type { TaskStatus } from '@/types/database'
 import { toast } from 'sonner'
@@ -43,6 +44,8 @@ interface Task {
   objective_id: string
   assignee_id: string | null
   due_date: string | null
+  time_spent_seconds: number
+  timer_started_at: string | null
   objectives: { name: string; color: string } | null
   assignee: { id: string; name: string; avatar_url: string | null } | null
 }
@@ -86,13 +89,19 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
           </div>
 
           <div className="flex items-center justify-between pl-6">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               {task.objectives && (
-                <Badge variant="outline" className="text-xs py-0 gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: task.objectives.color }} />
-                  {task.objectives.name}
+                <Badge variant="outline" className="text-xs py-0 gap-1 min-w-0">
+                  <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: task.objectives.color }} />
+                  <span className="truncate">{task.objectives.name}</span>
                 </Badge>
               )}
+              <TaskTimer
+                taskId={task.id}
+                timeSpentSeconds={task.time_spent_seconds ?? 0}
+                timerStartedAt={task.timer_started_at ?? null}
+                done={task.status === 'done'}
+              />
             </div>
             <div className="flex items-center gap-1.5">
               {task.due_date && (

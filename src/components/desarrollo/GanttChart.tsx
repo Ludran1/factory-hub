@@ -10,6 +10,7 @@ import {
 import { es } from 'date-fns/locale'
 import { ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
+import TaskTimer from './TaskTimer'
 import { toast } from 'sonner'
 
 interface Assignee { id: string; name: string; avatar_url: string | null }
@@ -19,6 +20,8 @@ interface Task {
   status: string
   priority?: string
   due_date?: string | null
+  time_spent_seconds?: number
+  timer_started_at?: string | null
   assignee?: Assignee | null
 }
 interface Objective {
@@ -365,6 +368,12 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                                     <AvatarFallback className="text-[8px]">{getInitials(task.assignee.name)}</AvatarFallback>
                                   </Avatar>
                                 )}
+                                <TaskTimer
+                                  taskId={task.id}
+                                  timeSpentSeconds={task.time_spent_seconds ?? 0}
+                                  timerStartedAt={task.timer_started_at ?? null}
+                                  done={done}
+                                />
                               </div>
                             </div>
                           </div>
