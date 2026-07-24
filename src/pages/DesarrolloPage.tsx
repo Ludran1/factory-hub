@@ -152,6 +152,7 @@ export default function DesarrolloPage() {
             ) : (
               <GanttChart
                 objectives={objectives as Parameters<typeof GanttChart>[0]['objectives']}
+                onTaskClick={handleTaskClick}
                 onNewObjective={() => { setEditingObjective(null); setObjectiveModalOpen(true) }}
                 onEditObjective={(obj) => {
                   setEditingObjective({

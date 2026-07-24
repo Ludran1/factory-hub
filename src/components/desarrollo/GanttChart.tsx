@@ -38,6 +38,14 @@ interface Props {
   objectives: Objective[]
   onNewObjective: () => void
   onEditObjective?: (obj: Objective) => void
+  onTaskClick?: (task: {
+    id: string
+    title: string
+    priority: string
+    objective_id: string
+    assignee_id: string | null
+    due_date: string | null
+  }) => void
 }
 
 function getProgress(tasks: Task[]) {
@@ -79,7 +87,7 @@ const objStatusLabel: Record<string, string> = {
   completado: 'Completado',
 }
 
-export default function GanttChart({ objectives, onEditObjective }: Props) {
+export default function GanttChart({ objectives, onEditObjective, onTaskClick }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null)
   const updateStatus = useUpdateTaskStatus()
@@ -317,14 +325,23 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                       return (
                         <div
                           key={task.id}
-                          className="flex border-b last:border-b-0 border-border/40 hover:bg-muted/30 transition-colors group"
+                          onClick={() => onTaskClick?.({
+                            id: task.id,
+                            title: task.title ?? '',
+                            priority: task.priority ?? 'media',
+                            objective_id: obj.id,
+                            assignee_id: task.assignee?.id ?? null,
+                            due_date: task.due_date ?? null,
+                          })}
+                          title="Click para editar o borrar la tarea"
+                          className="flex border-b last:border-b-0 border-border/40 hover:bg-muted/30 transition-colors group cursor-pointer"
                         >
                           {/* Info column */}
                           <div className="w-80 shrink-0 flex items-center gap-3 pl-12 pr-3 py-2 border-r">
                             {/* Checkbox */}
                             <button
                               type="button"
-                              onClick={() => toggleTaskDone(task)}
+                              onClick={(e) => { e.stopPropagation(); toggleTaskDone(task) }}
                               disabled={isLoading}
                               className="shrink-0 transition-transform hover:scale-110 disabled:opacity-50"
                               title={done ? 'Marcar como pendiente' : 'Marcar como completada'}

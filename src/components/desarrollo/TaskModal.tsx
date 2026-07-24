@@ -88,6 +88,7 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
 
   const handleDelete = async () => {
     if (!task) return
+    if (!window.confirm(`¿Borrar la tarea "${task.title}"? Esta acción no se puede deshacer.`)) return
     try {
       await deleteTask.mutateAsync(task.id)
       toast.success('Tarea eliminada')
