@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import {
   differenceInDays, parseISO, format, eachWeekOfInterval, eachDayOfInterval,
-  startOfWeek, endOfWeek, addDays,
+  startOfWeek, endOfWeek, addDays, isSameDay,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react'
@@ -113,13 +113,18 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
     )
   }
 
-  // Rango total de fechas, con padding para que se vea inicio y fin de cada
-  // objetivo dentro del timeline (y la regla muestre la semana donde acaba).
-  const allDates = objectives.flatMap(o => [parseISO(o.start_date), parseISO(o.end_date)])
+  // Rango total: objetivos + fechas estimadas de tareas + hoy, con padding
+  // corto para no dejar semanas vacías al inicio.
+  const today = new Date()
+  const allDates = [
+    ...objectives.flatMap(o => [parseISO(o.start_date), parseISO(o.end_date)]),
+    ...objectives.flatMap(o => o.tasks.filter(t => t.due_date).map(t => parseISO(t.due_date!))),
+    today,
+  ]
   const rawMin = new Date(Math.min(...allDates.map(d => d.getTime())))
   const rawMax = new Date(Math.max(...allDates.map(d => d.getTime())))
-  const minDate = addDays(rawMin, -7)
-  const maxDate = addDays(rawMax, 14)
+  const minDate = addDays(rawMin, -2)
+  const maxDate = addDays(rawMax, 7)
 
   // Semanas de lunes a domingo (consistente con locale es del resto de la app)
   const weekStart = (d: Date) => startOfWeek(d, { weekStartsOn: 1 })
@@ -137,6 +142,11 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
   const columns = useDays
     ? eachDayOfInterval({ start: origin, end: finish })
     : eachWeekOfInterval({ start: origin, end: finish }, { weekStartsOn: 1 })
+
+  // Posición de la línea "hoy" (centrada en el día actual)
+  const todayOffset = differenceInDays(today, origin)
+  const todayPos = ((todayOffset + 0.5) / totalDays) * 100
+  const showToday = todayOffset >= 0 && todayOffset <= totalDays
 
   const getBarStyle = (obj: Objective) => {
     const start = differenceInDays(parseISO(obj.start_date), origin)
@@ -160,8 +170,11 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                 <div
                   key={i}
                   className={cn(
-                    'flex-1 px-0.5 py-2 text-muted-foreground border-r last:border-r-0 text-center',
-                    useDays ? 'text-[10px]' : 'text-xs'
+                    'flex-1 px-0.5 py-2 border-r last:border-r-0 text-center',
+                    useDays ? 'text-[10px]' : 'text-xs',
+                    useDays && isSameDay(col, today)
+                      ? 'text-primary font-bold bg-primary/10'
+                      : 'text-muted-foreground'
                   )}
                 >
                   {useDays
@@ -172,6 +185,9 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                 </div>
               ))}
             </div>
+            {showToday && (
+              <div className="absolute inset-y-0 w-px bg-primary pointer-events-none" style={{ left: `${todayPos}%` }} />
+            )}
           </div>
         </div>
 
@@ -244,6 +260,9 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                       <div key={i} className="flex-1 border-r border-border/40 last:border-r-0" />
                     ))}
                   </div>
+                  {showToday && (
+                    <div className="absolute inset-y-0 w-px bg-primary/50 pointer-events-none" style={{ left: `${todayPos}%` }} />
+                  )}
 
                   <div className="relative h-7">
                     <div
@@ -350,6 +369,9 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                                 <div key={i} className="flex-1 border-r border-border/40 last:border-r-0" />
                               ))}
                             </div>
+                            {showToday && (
+                              <div className="absolute inset-y-0 w-px bg-primary/50 pointer-events-none" style={{ left: `${todayPos}%` }} />
+                            )}
                             {duePos !== null && task.due_date && (
                               <div
                                 className={cn(
@@ -396,6 +418,10 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rotate-45 bg-muted-foreground" />
           <span>Fecha estimada de tarea (roja si venció)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-3.5 w-px bg-primary" />
+          <span>Hoy</span>
         </div>
       </div>
     </div>
