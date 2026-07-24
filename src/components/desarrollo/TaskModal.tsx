@@ -16,6 +16,7 @@ const schema = z.object({
   priority: z.enum(['urgente', 'importante', 'alta', 'media', 'baja', 'delegar']),
   objective_id: z.string().min(1, 'Requerido'),
   assignee_id: z.string().optional(),
+  due_date: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -30,6 +31,7 @@ interface Props {
     priority: string
     objective_id: string
     assignee_id: string | null
+    due_date: string | null
   } | null
 }
 
@@ -61,6 +63,7 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
         priority: task.priority as FormData['priority'],
         objective_id: task.objective_id,
         assignee_id: task.assignee_id ?? undefined,
+        due_date: task.due_date ?? undefined,
       })
     } else {
       reset({ priority: 'media', objective_id: objectives[0]?.id ?? '' })
@@ -70,10 +73,10 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
   const onSubmit = async (data: FormData) => {
     try {
       if (isEdit && task) {
-        await updateTask.mutateAsync({ id: task.id, ...data, assignee_id: data.assignee_id || null })
+        await updateTask.mutateAsync({ id: task.id, ...data, assignee_id: data.assignee_id || null, due_date: data.due_date || null })
         toast.success('Tarea actualizada')
       } else {
-        await createTask.mutateAsync({ ...data, assignee_id: data.assignee_id || null })
+        await createTask.mutateAsync({ ...data, assignee_id: data.assignee_id || null, due_date: data.due_date || null })
         toast.success('Tarea creada')
       }
       onClose()
@@ -140,6 +143,11 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Fecha estimada de finalizacion</Label>
+            <Input type="date" {...register('due_date')} />
           </div>
 
           <div className="space-y-1.5">

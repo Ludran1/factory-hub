@@ -11,7 +11,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { GripVertical, Plus, Circle } from 'lucide-react'
+import { GripVertical, Plus, Circle, CalendarDays } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
 import { cn } from '@/lib/utils'
 import type { TaskStatus } from '@/types/database'
@@ -40,6 +42,7 @@ interface Task {
   status: TaskStatus
   objective_id: string
   assignee_id: string | null
+  due_date: string | null
   objectives: { name: string; color: string } | null
   assignee: { id: string; name: string; avatar_url: string | null } | null
 }
@@ -92,6 +95,19 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
               )}
             </div>
             <div className="flex items-center gap-1.5">
+              {task.due_date && (
+                <span
+                  className={cn(
+                    'flex items-center gap-1 text-[11px]',
+                    task.status !== 'done' && task.due_date < format(new Date(), 'yyyy-MM-dd')
+                      ? 'text-red-500'
+                      : 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarDays className="h-3 w-3" />
+                  {format(parseISO(task.due_date), 'd MMM', { locale: es })}
+                </span>
+              )}
               <Circle className={cn('h-2 w-2 fill-current', priorityConfig[task.priority]?.color)} />
               {task.assignee && (
                 <Avatar className="h-5 w-5">

@@ -77,6 +77,7 @@ export interface Database {
           priority: TaskPriority
           status: TaskStatus
           assignee_id: string | null
+          due_date: string | null
           created_at: string
           updated_at: string
         }
