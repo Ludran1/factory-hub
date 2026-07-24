@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DatePicker } from '@/components/ui/date-picker'
 import { useCreateTask, useUpdateTask, useDeleteTask, useDevelopers } from '@/hooks/useTasks'
 import { toast } from 'sonner'
 import { Trash2 } from 'lucide-react'
@@ -51,7 +52,7 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { priority: 'media', objective_id: objectives[0]?.id ?? '' },
   })
@@ -147,7 +148,13 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
 
           <div className="space-y-1.5">
             <Label>Fecha estimada de finalizacion</Label>
-            <Input type="date" {...register('due_date')} />
+            <Controller
+              name="due_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker value={field.value} onChange={field.onChange} />
+              )}
+            />
           </div>
 
           <div className="space-y-1.5">
