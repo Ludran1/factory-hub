@@ -18,6 +18,7 @@ interface Task {
   title?: string
   status: string
   priority?: string
+  due_date?: string | null
   assignee?: Assignee | null
 }
 interface Objective {
@@ -279,66 +280,97 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
                     obj.tasks.map(task => {
                       const done = task.status === 'done'
                       const isLoading = pendingTaskId === task.id
+                      const duePos = task.due_date
+                        ? Math.min(100, Math.max(0, (differenceInDays(parseISO(task.due_date), origin) / totalDays) * 100))
+                        : null
+                      const overdue = !done && !!task.due_date && task.due_date < format(new Date(), 'yyyy-MM-dd')
+                      const dueLabelLeft = duePos !== null && duePos > 88
                       return (
                         <div
                           key={task.id}
-                          className="flex items-center gap-3 pl-12 pr-4 py-2 border-b last:border-b-0 border-border/40 hover:bg-muted/30 transition-colors group"
+                          className="flex border-b last:border-b-0 border-border/40 hover:bg-muted/30 transition-colors group"
                         >
-                          {/* Checkbox */}
-                          <button
-                            type="button"
-                            onClick={() => toggleTaskDone(task)}
-                            disabled={isLoading}
-                            className="shrink-0 transition-transform hover:scale-110 disabled:opacity-50"
-                            title={done ? 'Marcar como pendiente' : 'Marcar como completada'}
-                          >
-                            {isLoading ? (
-                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                            ) : done ? (
-                              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
-                            )}
-                          </button>
+                          {/* Info column */}
+                          <div className="w-80 shrink-0 flex items-center gap-3 pl-12 pr-3 py-2 border-r">
+                            {/* Checkbox */}
+                            <button
+                              type="button"
+                              onClick={() => toggleTaskDone(task)}
+                              disabled={isLoading}
+                              className="shrink-0 transition-transform hover:scale-110 disabled:opacity-50"
+                              title={done ? 'Marcar como pendiente' : 'Marcar como completada'}
+                            >
+                              {isLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              ) : done ? (
+                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                              )}
+                            </button>
 
-                          {/* Title */}
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              'text-sm truncate',
-                              done && 'line-through text-muted-foreground'
-                            )}>
-                              {task.title ?? '(sin título)'}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn(
+                                'text-sm truncate',
+                                done && 'line-through text-muted-foreground'
+                              )}>
+                                {task.title ?? '(sin título)'}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {task.priority && (
+                                  <span
+                                    className={cn(
+                                      'text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0',
+                                      priorityColor[task.priority] ?? priorityColor.media
+                                    )}
+                                  >
+                                    {task.priority}
+                                  </span>
+                                )}
+                                <span className={cn(
+                                  'text-[10px] font-medium shrink-0',
+                                  statusColor[task.status]
+                                )}>
+                                  {statusLabel[task.status] ?? task.status}
+                                </span>
+                                {task.assignee && (
+                                  <Avatar className="h-4 w-4" title={task.assignee.name}>
+                                    {task.assignee.avatar_url && <AvatarImage src={task.assignee.avatar_url} />}
+                                    <AvatarFallback className="text-[8px]">{getInitials(task.assignee.name)}</AvatarFallback>
+                                  </Avatar>
+                                )}
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Priority */}
-                          {task.priority && (
-                            <span
-                              className={cn(
-                                'text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0',
-                                priorityColor[task.priority] ?? priorityColor.media
-                              )}
-                            >
-                              {task.priority}
-                            </span>
-                          )}
-
-                          {/* Status */}
-                          <span className={cn(
-                            'text-[10px] font-medium shrink-0 w-20 text-right',
-                            statusColor[task.status]
-                          )}>
-                            {statusLabel[task.status] ?? task.status}
-                          </span>
-
-                          {/* Assignee */}
-                          <div className="shrink-0 w-8">
-                            {task.assignee ? (
-                              <Avatar className="h-6 w-6" title={task.assignee.name}>
-                                {task.assignee.avatar_url && <AvatarImage src={task.assignee.avatar_url} />}
-                                <AvatarFallback className="text-[9px]">{getInitials(task.assignee.name)}</AvatarFallback>
-                              </Avatar>
-                            ) : null}
+                          {/* Timeline column: marcador de fecha estimada */}
+                          <div className="flex-1 relative min-w-0">
+                            <div className="absolute inset-0 flex pointer-events-none">
+                              {columns.map((_, i) => (
+                                <div key={i} className="flex-1 border-r border-border/40 last:border-r-0" />
+                              ))}
+                            </div>
+                            {duePos !== null && task.due_date && (
+                              <div
+                                className={cn(
+                                  'absolute inset-y-0 flex items-center gap-1.5',
+                                  dueLabelLeft && 'flex-row-reverse'
+                                )}
+                                style={dueLabelLeft ? { right: `${100 - duePos}%` } : { left: `${duePos}%` }}
+                                title="Fecha estimada de finalización"
+                              >
+                                <span className={cn(
+                                  'h-2 w-2 rotate-45 shrink-0',
+                                  done ? 'bg-emerald-500' : overdue ? 'bg-red-500' : 'bg-muted-foreground'
+                                )} />
+                                <span className={cn(
+                                  'text-[10px] whitespace-nowrap',
+                                  done ? 'text-emerald-600' : overdue ? 'text-red-500' : 'text-muted-foreground'
+                                )}>
+                                  {format(parseISO(task.due_date), 'd MMM', { locale: es })}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -360,6 +392,10 @@ export default function GanttChart({ objectives, onEditObjective }: Props) {
         <div className="flex items-center gap-1.5">
           <ChevronRight className="h-3.5 w-3.5" />
           <span>Click en un objetivo para expandir sus tareas</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rotate-45 bg-muted-foreground" />
+          <span>Fecha estimada de tarea (roja si venció)</span>
         </div>
       </div>
     </div>
