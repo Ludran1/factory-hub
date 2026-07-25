@@ -8,7 +8,7 @@ import {
   startOfWeek, endOfWeek, addDays, isSameDay,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2, Pencil } from 'lucide-react'
+import { ChevronDown, ChevronRight, Check, CheckCircle2, Loader2, Pencil } from 'lucide-react'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
 import TaskTimer from './TaskTimer'
 import { toast } from 'sonner'
@@ -343,15 +343,19 @@ export default function GanttChart({ objectives, onEditObjective, onTaskClick }:
                               type="button"
                               onClick={(e) => { e.stopPropagation(); toggleTaskDone(task) }}
                               disabled={isLoading}
-                              className="shrink-0 transition-transform hover:scale-110 disabled:opacity-50"
+                              className="shrink-0 group/check disabled:opacity-50"
                               title={done ? 'Marcar como pendiente' : 'Marcar como completada'}
                             >
                               {isLoading ? (
-                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                               ) : done ? (
-                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_10px] shadow-emerald-500/50 transition-transform group-hover/check:scale-110 animate-check-pop">
+                                  <Check className="h-4 w-4" strokeWidth={3.5} />
+                                </span>
                               ) : (
-                                <Circle className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-muted-foreground/50 text-transparent transition-all group-hover/check:scale-110 group-hover/check:border-emerald-500 group-hover/check:bg-emerald-500/15 group-hover/check:text-emerald-500">
+                                  <Check className="h-4 w-4" strokeWidth={3.5} />
+                                </span>
                               )}
                             </button>
 

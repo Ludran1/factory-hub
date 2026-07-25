@@ -174,3 +174,13 @@
 .tiptap.resize-cursor {
   cursor: col-resize;
 }
+
+/* Pop del check de tarea completada (Gantt) */
+@keyframes check-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.animate-check-pop {
+  animation: check-pop 0.25s ease-out;
+}
