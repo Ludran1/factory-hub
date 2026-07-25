@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TableKit } from '@tiptap/extension-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +11,7 @@ import { useNotes, useCreateNote, useSaveNote, useDeleteNote } from '@/hooks/use
 import { useAuth } from '@/hooks/useAuth'
 import {
   Plus, Trash2, Loader2, Save, FileText,
-  Bold, Italic, List, ListOrdered, Heading2, Code
+  Bold, Italic, List, ListOrdered, Heading2, Code, Table as TableIcon
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -40,8 +41,11 @@ export default function NotesEditor({ projectId }: Props) {
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder: 'Escribe aqui...' }),
+      TableKit.configure({ table: { resizable: true } }),
     ],
     content: '',
+    // La toolbar depende de isActive() (negrita, tabla, etc.): re-render por transacción
+    shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
         class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[400px] px-1',
@@ -238,6 +242,40 @@ export default function NotesEditor({ projectId }: Props) {
             </Button>
 
             <Separator orientation="vertical" className="h-5 mx-1" />
+
+            <Button
+              variant="ghost"
+              onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+              className={cn('h-7 w-7', editor?.isActive('table') && 'bg-accent')}
+              size="icon"
+              title="Insertar tabla"
+            >
+              <TableIcon className="h-3.5 w-3.5" />
+            </Button>
+            {editor?.isActive('table') && (
+              <>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" title="Agregar columna"
+                  onClick={() => editor?.chain().focus().addColumnAfter().run()}>
+                  + Col
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" title="Agregar fila"
+                  onClick={() => editor?.chain().focus().addRowAfter().run()}>
+                  + Fila
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" title="Eliminar columna"
+                  onClick={() => editor?.chain().focus().deleteColumn().run()}>
+                  − Col
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" title="Eliminar fila"
+                  onClick={() => editor?.chain().focus().deleteRow().run()}>
+                  − Fila
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" title="Eliminar tabla"
+                  onClick={() => editor?.chain().focus().deleteTable().run()}>
+                  ✕ Tabla
+                </Button>
+              </>
+            )}
 
             <div className="flex-1" />
 
