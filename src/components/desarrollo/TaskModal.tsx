@@ -107,7 +107,7 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
     shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[110px] max-h-[240px] overflow-y-auto rounded-md border border-input px-3 py-2',
+        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[280px] max-h-[420px] overflow-y-auto rounded-md border border-input px-3 py-2',
       },
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items
@@ -172,11 +172,14 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid gap-5 md:grid-cols-2">
+          {/* Columna izquierda: datos */}
+          <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Titulo</Label>
             <Input placeholder="Descripcion de la tarea..." {...register('title')} />
@@ -220,6 +223,52 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
           </div>
 
           <div className="space-y-1.5">
+            <Label>Fecha estimada de finalizacion</Label>
+            <Controller
+              name="due_date"
+              control={control}
+              render={({ field }) => (
+                <DatePicker value={field.value} onChange={field.onChange} />
+              )}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Asignar a</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {developers.map(dev => {
+                const selected = (watch('assignee_ids') ?? []).includes(dev.id)
+                return (
+                  <button
+                    key={dev.id}
+                    type="button"
+                    onClick={() => {
+                      const current = watch('assignee_ids') ?? []
+                      setValue(
+                        'assignee_ids',
+                        selected ? current.filter(id => id !== dev.id) : [...current, dev.id]
+                      )
+                    }}
+                    className={cn(
+                      'text-xs px-2.5 py-1 rounded-full border transition-colors',
+                      selected
+                        ? 'bg-primary/10 text-primary border-primary/40'
+                        : 'bg-muted/50 text-muted-foreground border-transparent hover:opacity-80'
+                    )}
+                  >
+                    {dev.name}
+                  </button>
+                )
+              })}
+              {developers.length === 0 && (
+                <p className="text-xs text-muted-foreground">No hay usuarios asignables</p>
+              )}
+            </div>
+          </div>
+          </div>
+
+          {/* Columna derecha: descripción con todo el alto */}
+          <div className="space-y-1.5 flex flex-col min-h-0">
             <div className="flex items-center justify-between">
               <Label>Descripcion</Label>
               <div className="flex items-center gap-1">
@@ -278,49 +327,6 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
             </div>
             <EditorContent editor={editor} />
           </div>
-
-          <div className="space-y-1.5">
-            <Label>Fecha estimada de finalizacion</Label>
-            <Controller
-              name="due_date"
-              control={control}
-              render={({ field }) => (
-                <DatePicker value={field.value} onChange={field.onChange} />
-              )}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Asignar a</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {developers.map(dev => {
-                const selected = (watch('assignee_ids') ?? []).includes(dev.id)
-                return (
-                  <button
-                    key={dev.id}
-                    type="button"
-                    onClick={() => {
-                      const current = watch('assignee_ids') ?? []
-                      setValue(
-                        'assignee_ids',
-                        selected ? current.filter(id => id !== dev.id) : [...current, dev.id]
-                      )
-                    }}
-                    className={cn(
-                      'text-xs px-2.5 py-1 rounded-full border transition-colors',
-                      selected
-                        ? 'bg-primary/10 text-primary border-primary/40'
-                        : 'bg-muted/50 text-muted-foreground border-transparent hover:opacity-80'
-                    )}
-                  >
-                    {dev.name}
-                  </button>
-                )
-              })}
-              {developers.length === 0 && (
-                <p className="text-xs text-muted-foreground">No hay usuarios asignables</p>
-              )}
-            </div>
           </div>
 
           <div className="flex justify-between pt-2">
