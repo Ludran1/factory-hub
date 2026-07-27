@@ -45,8 +45,9 @@ export default function DesarrolloPage() {
       `Vas a borrar el proyecto "${currentProject.name}" con TODOS sus objetivos, tareas, notas y pizarras. Esta acción no se puede deshacer.\n\nEscribe el nombre del proyecto para confirmar:`
     )
     if (typed === null) return
-    if (typed.trim() !== currentProject.name) {
-      toast.error('El nombre no coincide — no se borró nada')
+    const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+    if (normalize(typed) !== normalize(currentProject.name)) {
+      toast.error(`El nombre no coincide (escribiste "${typed.trim()}", el proyecto es "${currentProject.name}") — no se borró nada`)
       return
     }
     try {
