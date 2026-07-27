@@ -23,7 +23,7 @@ interface Task {
   time_spent_seconds?: number
   timer_started_at?: string | null
   description?: unknown
-  assignee?: Assignee | null
+  assignees?: Assignee[]
 }
 interface Objective {
   id: string
@@ -44,7 +44,7 @@ interface Props {
     title: string
     priority: string
     objective_id: string
-    assignee_id: string | null
+    assignees: Assignee[]
     due_date: string | null
     description?: unknown
   }) => void
@@ -333,7 +333,7 @@ export default function GanttChart({ objectives, onEditObjective, onTaskClick, o
                             title: task.title ?? '',
                             priority: task.priority ?? 'media',
                             objective_id: obj.id,
-                            assignee_id: task.assignee?.id ?? null,
+                            assignees: task.assignees ?? [],
                             due_date: task.due_date ?? null,
                             description: task.description ?? null,
                           })}
@@ -387,13 +387,23 @@ export default function GanttChart({ objectives, onEditObjective, onTaskClick, o
                                 )}>
                                   {statusLabel[task.status] ?? task.status}
                                 </span>
-                                {task.assignee && (
+                                {(task.assignees?.length ?? 0) > 0 && (
                                   <span className="flex items-center gap-1 min-w-0">
-                                    <Avatar className="h-4 w-4 shrink-0">
-                                      {task.assignee.avatar_url && <AvatarImage src={task.assignee.avatar_url} />}
-                                      <AvatarFallback className="text-[8px]">{getInitials(task.assignee.name)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-[10px] text-muted-foreground truncate">{task.assignee.name}</span>
+                                    <span className="flex -space-x-1">
+                                      {task.assignees!.slice(0, 3).map(a => (
+                                        <Avatar key={a.id} className="h-4 w-4 shrink-0 ring-1 ring-background" title={a.name}>
+                                          {a.avatar_url && <AvatarImage src={a.avatar_url} />}
+                                          <AvatarFallback className="text-[8px]">{getInitials(a.name)}</AvatarFallback>
+                                        </Avatar>
+                                      ))}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground truncate">
+                                      {task.assignees!.length === 1
+                                        ? task.assignees![0].name
+                                        : task.assignees!.length > 3
+                                          ? `+${task.assignees!.length - 3}`
+                                          : ''}
+                                    </span>
                                   </span>
                                 )}
                                 <TaskTimer

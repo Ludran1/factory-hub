@@ -42,13 +42,12 @@ interface Task {
   priority: string
   status: TaskStatus
   objective_id: string
-  assignee_id: string | null
   due_date: string | null
   time_spent_seconds: number
   timer_started_at: string | null
   description?: unknown
   objectives: { name: string; color: string } | null
-  assignee: { id: string; name: string; avatar_url: string | null } | null
+  assignees: Array<{ id: string; name: string; avatar_url: string | null }>
 }
 
 interface KanbanCardProps {
@@ -122,16 +121,24 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
                 </span>
               )}
               <Circle className={cn('h-2 w-2 fill-current', priorityConfig[task.priority]?.color)} />
-              {task.assignee && (
+              {task.assignees.length > 0 && (
                 <span className="flex items-center gap-1 min-w-0">
-                  <Avatar className="h-5 w-5 shrink-0">
-                    <AvatarImage src={task.assignee.avatar_url ?? undefined} />
-                    <AvatarFallback className="text-[10px]">
-                      {task.assignee.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <span className="flex -space-x-1.5">
+                    {task.assignees.slice(0, 3).map(a => (
+                      <Avatar key={a.id} className="h-5 w-5 shrink-0 ring-1 ring-background" title={a.name}>
+                        <AvatarImage src={a.avatar_url ?? undefined} />
+                        <AvatarFallback className="text-[10px]">
+                          {a.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </span>
                   <span className="text-[11px] text-muted-foreground truncate max-w-[9rem]">
-                    {task.assignee.name}
+                    {task.assignees.length === 1
+                      ? task.assignees[0].name
+                      : task.assignees.length > 3
+                        ? `+${task.assignees.length - 3}`
+                        : ''}
                   </span>
                 </span>
               )}

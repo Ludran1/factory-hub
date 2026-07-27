@@ -8,11 +8,18 @@ export function useObjectives(projectId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('objectives')
-        .select(`*, tasks(id, title, status, priority, due_date, time_spent_seconds, timer_started_at, description, assignee:profiles(id, name, avatar_url))`)
+        .select(`*, tasks(id, title, status, priority, due_date, time_spent_seconds, timer_started_at, description, task_assignees(profile:profiles(id, name, avatar_url)))`)
         .eq('project_id', projectId!)
         .order('start_date', { ascending: true })
       if (error) throw error
-      return data
+      // Aplanar task_assignees → assignees en cada tarea
+      return ((data ?? []) as any[]).map(o => ({
+        ...o,
+        tasks: (o.tasks ?? []).map((t: any) => ({
+          ...t,
+          assignees: (t.task_assignees ?? []).map((a: any) => a.profile).filter(Boolean),
+        })),
+      }))
     },
   })
 }

@@ -12,29 +12,62 @@ export function useTasks(projectId: string | null) {
         .select(`
           *,
           objectives!inner(id, name, color, project_id),
-          assignee:profiles(id, name, avatar_url)
+          task_assignees(profile:profiles(id, name, avatar_url))
         `)
         .eq('objectives.project_id', projectId!)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return data
+      // Aplanar task_assignees → assignees: [{id, name, avatar_url}]
+      return ((data ?? []) as any[]).map(t => ({
+        ...t,
+        assignees: (t.task_assignees ?? []).map((a: any) => a.profile).filter(Boolean),
+      }))
     },
   })
+}
+
+async function setTaskAssignees(taskId: string, assigneeIds: string[]) {
+  const { data: current, error: readError } = await supabase
+    .from('task_assignees')
+    .select('profile_id')
+    .eq('task_id', taskId)
+  if (readError) throw readError
+  const currentIds = (current ?? []).map(a => a.profile_id)
+  const toAdd = assigneeIds.filter(id => !currentIds.includes(id))
+  const toRemove = currentIds.filter(id => !assigneeIds.includes(id))
+  // Solo insertar los nuevos (insertar dispara la notificación de asignación)
+  if (toAdd.length > 0) {
+    const { error } = await supabase
+      .from('task_assignees')
+      .insert(toAdd.map(profile_id => ({ task_id: taskId, profile_id })))
+    if (error) throw error
+  }
+  if (toRemove.length > 0) {
+    const { error } = await supabase
+      .from('task_assignees')
+      .delete()
+      .eq('task_id', taskId)
+      .in('profile_id', toRemove)
+    if (error) throw error
+  }
 }
 
 export function useCreateTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (task: {
+    mutationFn: async ({ assignee_ids, ...task }: {
       objective_id: string
       title: string
       priority: string
-      assignee_id?: string | null
+      assignee_ids?: string[]
       due_date?: string | null
       description?: unknown
     }) => {
       const { data, error } = await supabase.from('tasks').insert(task).select().single()
       if (error) throw error
+      if (assignee_ids && assignee_ids.length > 0) {
+        await setTaskAssignees(data.id, assignee_ids)
+      }
       return data
     },
     onSuccess: () => {
@@ -88,9 +121,12 @@ export function useUpdateTaskStatus() {
 export function useUpdateTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; title?: string; priority?: string; status?: string; assignee_id?: string | null; due_date?: string | null; description?: unknown }) => {
+    mutationFn: async ({ id, assignee_ids, ...updates }: { id: string; title?: string; priority?: string; status?: string; assignee_ids?: string[]; due_date?: string | null; description?: unknown }) => {
       const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single()
       if (error) throw error
+      if (assignee_ids) {
+        await setTaskAssignees(id, assignee_ids)
+      }
       return data
     },
     onSuccess: () => {

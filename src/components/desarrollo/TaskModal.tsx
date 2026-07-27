@@ -39,7 +39,7 @@ const schema = z.object({
   title: z.string().min(1, 'Requerido'),
   priority: z.enum(['urgente', 'importante', 'alta', 'media', 'baja', 'delegar']),
   objective_id: z.string().min(1, 'Requerido'),
-  assignee_id: z.string().optional(),
+  assignee_ids: z.array(z.string()),
   due_date: z.string().optional(),
 })
 
@@ -55,7 +55,7 @@ interface Props {
     title: string
     priority: string
     objective_id: string
-    assignee_id: string | null
+    assignees?: Array<{ id: string; name?: string; avatar_url?: string | null }> | null
     due_date: string | null
     description?: unknown
   } | null
@@ -80,7 +80,7 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
 
   const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { priority: 'media', objective_id: objectives[0]?.id ?? '' },
+    defaultValues: { priority: 'media', objective_id: objectives[0]?.id ?? '', assignee_ids: [] },
   })
 
   const insertImageFile = (file: File) => {
@@ -132,12 +132,12 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
         title: task.title,
         priority: task.priority as FormData['priority'],
         objective_id: task.objective_id,
-        assignee_id: task.assignee_id ?? undefined,
+        assignee_ids: task.assignees?.map(a => a.id) ?? [],
         due_date: task.due_date ?? undefined,
       })
       editor?.commands.setContent((task.description as object) ?? '')
     } else {
-      reset({ priority: 'media', objective_id: defaultObjectiveId ?? objectives[0]?.id ?? '' })
+      reset({ priority: 'media', objective_id: defaultObjectiveId ?? objectives[0]?.id ?? '', assignee_ids: [] })
       editor?.commands.setContent('')
     }
   }, [task, open, editor, defaultObjectiveId])
@@ -146,10 +146,10 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
     try {
       const description = editor && !editor.isEmpty ? editor.getJSON() : null
       if (isEdit && task) {
-        await updateTask.mutateAsync({ id: task.id, ...data, assignee_id: data.assignee_id || null, due_date: data.due_date || null, description })
+        await updateTask.mutateAsync({ id: task.id, ...data, due_date: data.due_date || null, description })
         toast.success('Tarea actualizada')
       } else {
-        await createTask.mutateAsync({ ...data, assignee_id: data.assignee_id || null, due_date: data.due_date || null, description })
+        await createTask.mutateAsync({ ...data, due_date: data.due_date || null, description })
         toast.success('Tarea creada')
       }
       onClose()
@@ -292,17 +292,35 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
 
           <div className="space-y-1.5">
             <Label>Asignar a</Label>
-            <Select value={watch('assignee_id') ?? 'none'} onValueChange={(v) => setValue('assignee_id', v === 'none' ? undefined : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sin asignar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin asignar</SelectItem>
-                {developers.map(dev => (
-                  <SelectItem key={dev.id} value={dev.id}>{dev.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-1.5">
+              {developers.map(dev => {
+                const selected = (watch('assignee_ids') ?? []).includes(dev.id)
+                return (
+                  <button
+                    key={dev.id}
+                    type="button"
+                    onClick={() => {
+                      const current = watch('assignee_ids') ?? []
+                      setValue(
+                        'assignee_ids',
+                        selected ? current.filter(id => id !== dev.id) : [...current, dev.id]
+                      )
+                    }}
+                    className={cn(
+                      'text-xs px-2.5 py-1 rounded-full border transition-colors',
+                      selected
+                        ? 'bg-primary/10 text-primary border-primary/40'
+                        : 'bg-muted/50 text-muted-foreground border-transparent hover:opacity-80'
+                    )}
+                  >
+                    {dev.name}
+                  </button>
+                )
+              })}
+              {developers.length === 0 && (
+                <p className="text-xs text-muted-foreground">No hay usuarios asignables</p>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between pt-2">

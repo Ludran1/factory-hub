@@ -208,6 +208,16 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['notes']['Insert']>
         Relationships: []
       }
+      task_assignees: {
+        Row: {
+          task_id: string
+          profile_id: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['task_assignees']['Row'], 'created_at'>
+        Update: Partial<Database['public']['Tables']['task_assignees']['Insert']>
+        Relationships: []
+      }
       notifications: {
         Row: {
           id: string

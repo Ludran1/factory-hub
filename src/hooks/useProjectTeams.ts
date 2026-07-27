@@ -49,10 +49,9 @@ export function useProjectTeams() {
           .select(`
             id,
             status,
-            assignee_id,
             objective_id,
             objectives!inner(project_id),
-            assignee:profiles(id, name, avatar_url)
+            task_assignees(profile:profiles(id, name, avatar_url))
           `),
         supabase
           .from('project_members')
@@ -92,8 +91,10 @@ export function useProjectTeams() {
 
         // 2. Sumar conteos de tareas (puede ser un miembro explícito o nuevo derivado)
         for (const t of projectTasks) {
-          if (!t.assignee) continue
-          const a = t.assignee as { id: string; name: string; avatar_url: string | null }
+          const assignees = ((t.task_assignees ?? []) as any[])
+            .map(x => x.profile)
+            .filter(Boolean) as Array<{ id: string; name: string; avatar_url: string | null }>
+          for (const a of assignees) {
           const existing = memberMap.get(a.id)
           if (existing) {
             existing.taskCount += 1
@@ -109,6 +110,7 @@ export function useProjectTeams() {
               role: null,
               memberRowId: null,
             })
+          }
           }
         }
 
