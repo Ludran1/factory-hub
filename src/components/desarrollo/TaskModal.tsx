@@ -49,6 +49,7 @@ interface Props {
   open: boolean
   onClose: () => void
   objectives: Array<{ id: string; name: string; color: string }>
+  defaultObjectiveId?: string | null
   task?: {
     id: string
     title: string
@@ -69,7 +70,7 @@ const priorityColors: Record<string, string> = {
   delegar: 'text-sky-500',
 }
 
-export default function TaskModal({ open, onClose, objectives, task }: Props) {
+export default function TaskModal({ open, onClose, objectives, task, defaultObjectiveId }: Props) {
   const isEdit = !!task
   const { data: developers = [] } = useDevelopers()
   const createTask = useCreateTask()
@@ -136,10 +137,10 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
       })
       editor?.commands.setContent((task.description as object) ?? '')
     } else {
-      reset({ priority: 'media', objective_id: objectives[0]?.id ?? '' })
+      reset({ priority: 'media', objective_id: defaultObjectiveId ?? objectives[0]?.id ?? '' })
       editor?.commands.setContent('')
     }
-  }, [task, open, editor])
+  }, [task, open, editor, defaultObjectiveId])
 
   const onSubmit = async (data: FormData) => {
     try {

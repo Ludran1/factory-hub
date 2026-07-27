@@ -23,6 +23,7 @@ export default function DesarrolloPage() {
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [membersModalOpen, setMembersModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Parameters<typeof TaskModal>[0]['task']>(null)
+  const [defaultObjectiveId, setDefaultObjectiveId] = useState<string | null>(null)
 
   const { data: projects = [], isLoading: loadingProjects } = useProjects()
   const deleteProject = useDeleteProject()
@@ -59,6 +60,13 @@ export default function DesarrolloPage() {
 
   const handleNewTask = () => {
     setEditingTask(null)
+    setDefaultObjectiveId(null)
+    setTaskModalOpen(true)
+  }
+
+  const handleNewTaskForObjective = (objectiveId: string) => {
+    setEditingTask(null)
+    setDefaultObjectiveId(objectiveId)
     setTaskModalOpen(true)
   }
 
@@ -188,6 +196,7 @@ export default function DesarrolloPage() {
               <GanttChart
                 objectives={objectives as Parameters<typeof GanttChart>[0]['objectives']}
                 onTaskClick={handleTaskClick}
+                onNewTask={handleNewTaskForObjective}
                 onNewObjective={() => { setEditingObjective(null); setObjectiveModalOpen(true) }}
                 onEditObjective={(obj) => {
                   setEditingObjective({
@@ -221,9 +230,10 @@ export default function DesarrolloPage() {
           />
           <TaskModal
             open={taskModalOpen}
-            onClose={() => { setTaskModalOpen(false); setEditingTask(null) }}
+            onClose={() => { setTaskModalOpen(false); setEditingTask(null); setDefaultObjectiveId(null) }}
             objectives={objectives}
             task={editingTask}
+            defaultObjectiveId={defaultObjectiveId}
           />
           <ProjectMembersModal
             open={membersModalOpen}

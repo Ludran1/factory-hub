@@ -8,7 +8,7 @@ import {
   startOfWeek, endOfWeek, addDays, isSameDay,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronDown, ChevronRight, Check, CheckCircle2, Loader2, Pencil } from 'lucide-react'
+import { ChevronDown, ChevronRight, Check, CheckCircle2, Loader2, Pencil, Plus } from 'lucide-react'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
 import TaskTimer from './TaskTimer'
 import { toast } from 'sonner'
@@ -48,6 +48,7 @@ interface Props {
     due_date: string | null
     description?: unknown
   }) => void
+  onNewTask?: (objectiveId: string) => void
 }
 
 function getProgress(tasks: Task[]) {
@@ -89,7 +90,7 @@ const objStatusLabel: Record<string, string> = {
   completado: 'Completado',
 }
 
-export default function GanttChart({ objectives, onEditObjective, onTaskClick }: Props) {
+export default function GanttChart({ objectives, onEditObjective, onTaskClick, onNewTask }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null)
   const updateStatus = useUpdateTaskStatus()
@@ -311,7 +312,7 @@ export default function GanttChart({ objectives, onEditObjective, onTaskClick }:
               {/* Task rows (expanded) */}
               {isExpanded && (
                 <div className="bg-muted/10 border-t">
-                  {obj.tasks.length === 0 ? (
+                  {obj.tasks.length === 0 && !onNewTask ? (
                     <div className="px-12 py-3 text-xs text-muted-foreground italic">
                       Sin tareas. Crea una desde "Nueva tarea".
                     </div>
@@ -440,6 +441,18 @@ export default function GanttChart({ objectives, onEditObjective, onTaskClick }:
                         </div>
                       )
                     })
+                  )}
+                  {onNewTask && (
+                    <button
+                      type="button"
+                      onClick={() => onNewTask(obj.id)}
+                      className="flex items-center gap-2 w-full pl-12 pr-4 py-2 text-left text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors border-t border-border/40"
+                    >
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
+                        <Plus className="h-3 w-3" />
+                      </span>
+                      Agregar tarea a "{obj.name}"
+                    </button>
                   )}
                 </div>
               )}
