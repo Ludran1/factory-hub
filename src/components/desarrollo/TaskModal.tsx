@@ -107,7 +107,7 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
     shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[280px] max-h-[420px] overflow-y-auto rounded-md border border-input px-3 py-2',
+        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full min-h-[280px] max-h-[60vh] overflow-y-auto rounded-md border border-input px-3 py-2',
       },
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items
@@ -325,7 +325,7 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
                 />
               </div>
             </div>
-            <EditorContent editor={editor} />
+            <EditorContent editor={editor} className="flex-1 min-h-0 [&>div]:h-full" />
           </div>
           </div>
 
