@@ -20,7 +20,8 @@ import { cn } from '@/lib/utils'
 
 const MAX_IMAGE_BYTES = 1_500_000
 
-// Image con ancho persistente (para poder achicar/agrandar en el editor)
+// Image con ancho persistente + manejador de resize en la esquina.
+// Arrastrar la imagen (nativo de ProseMirror) la reubica en el documento.
 const ResizableImage = Image.extend({
   addAttributes() {
     return {
@@ -31,6 +32,57 @@ const ResizableImage = Image.extend({
         renderHTML: (attrs: { width?: string | null }) =>
           attrs.width ? { style: `width: ${attrs.width}` } : {},
       },
+    }
+  },
+  addNodeView() {
+    return ({ node, editor, getPos }) => {
+      const wrapper = document.createElement('div')
+      wrapper.className = 'img-resizer'
+      const img = document.createElement('img')
+      img.src = node.attrs.src
+      if (node.attrs.width) img.style.width = node.attrs.width
+      const handle = document.createElement('div')
+      handle.className = 'img-resizer-handle'
+      handle.title = 'Arrastrar para cambiar el tamaño'
+      wrapper.append(img, handle)
+
+      let startX = 0
+      let startW = 0
+      const onMove = (e: MouseEvent) => {
+        const w = Math.round(Math.max(60, startW + (e.clientX - startX)))
+        img.style.width = `${w}px`
+      }
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        if (typeof getPos === 'function') {
+          const pos = getPos()
+          if (pos !== undefined) {
+            editor.commands.command(({ tr }) => {
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, width: img.style.width })
+              return true
+            })
+          }
+        }
+      }
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        startX = e.clientX
+        startW = img.getBoundingClientRect().width
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+      })
+
+      return {
+        dom: wrapper,
+        update: (updated) => {
+          if (updated.type.name !== 'image') return false
+          img.src = updated.attrs.src
+          img.style.width = updated.attrs.width ?? ''
+          return true
+        },
+      }
     }
   },
 })

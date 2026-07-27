@@ -250,3 +250,36 @@
 .tiptap img.ProseMirror-selectednode {
   outline: 2px solid hsl(var(--primary));
 }
+
+/* Imagen redimensionable (esquina) y arrastrable */
+.tiptap .img-resizer {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  cursor: grab;
+}
+.tiptap .img-resizer img {
+  display: block;
+  max-width: 100%;
+}
+.tiptap .img-resizer.ProseMirror-selectednode img {
+  outline: 2px solid hsl(var(--primary));
+}
+.tiptap .img-resizer .img-resizer-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  border: 2px solid hsl(var(--background));
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+.tiptap .img-resizer:hover .img-resizer-handle,
+.tiptap .img-resizer.ProseMirror-selectednode .img-resizer-handle {
+  opacity: 1;
+}
