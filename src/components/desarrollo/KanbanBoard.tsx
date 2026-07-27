@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { GripVertical, Plus, Circle, CalendarDays } from 'lucide-react'
+import { GripVertical, Plus, Circle, CalendarDays, AlignLeft } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useUpdateTaskStatus } from '@/hooks/useTasks'
@@ -46,6 +46,7 @@ interface Task {
   due_date: string | null
   time_spent_seconds: number
   timer_started_at: string | null
+  description?: unknown
   objectives: { name: string; color: string } | null
   assignee: { id: string; name: string; avatar_url: string | null } | null
 }
@@ -104,6 +105,9 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
               />
             </div>
             <div className="flex items-center gap-1.5">
+              {!!task.description && (
+                <AlignLeft className="h-3 w-3 text-muted-foreground" aria-label="Tiene descripción" />
+              )}
               {task.due_date && (
                 <span
                   className={cn(

@@ -31,6 +31,7 @@ export function useCreateTask() {
       priority: string
       assignee_id?: string | null
       due_date?: string | null
+      description?: unknown
     }) => {
       const { data, error } = await supabase.from('tasks').insert(task).select().single()
       if (error) throw error
@@ -87,7 +88,7 @@ export function useUpdateTaskStatus() {
 export function useUpdateTask() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; title?: string; priority?: string; status?: string; assignee_id?: string | null; due_date?: string | null }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; priority?: string; status?: string; assignee_id?: string | null; due_date?: string | null; description?: unknown }) => {
       const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single()
       if (error) throw error
       return data

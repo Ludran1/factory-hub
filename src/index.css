@@ -184,3 +184,29 @@
 .animate-check-pop {
   animation: check-pop 0.25s ease-out;
 }
+
+/* Checklist e imágenes en el editor (tiptap) */
+.tiptap ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.tiptap ul[data-type='taskList'] li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.tiptap ul[data-type='taskList'] li > label {
+  margin-top: 0.2em;
+  user-select: none;
+}
+.tiptap ul[data-type='taskList'] li[data-checked='true'] > div {
+  text-decoration: line-through;
+  color: hsl(var(--muted-foreground));
+}
+.tiptap img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+.tiptap img.ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--primary));
+}

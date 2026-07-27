@@ -80,6 +80,7 @@ export interface Database {
           due_date: string | null
           time_spent_seconds: number
           timer_started_at: string | null
+          description: unknown | null
           created_at: string
           updated_at: string
         }
