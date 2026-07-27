@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TableKit } from '@tiptap/extension-table'
+import { TaskList, TaskItem } from '@tiptap/extension-list'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +12,7 @@ import { useNotes, useCreateNote, useSaveNote, useDeleteNote } from '@/hooks/use
 import { useAuth } from '@/hooks/useAuth'
 import {
   Plus, Trash2, Loader2, Save, FileText,
-  Bold, Italic, List, ListOrdered, Heading2, Code, Table as TableIcon
+  Bold, Italic, List, ListOrdered, Heading2, Code, Table as TableIcon, ListChecks
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -42,6 +43,8 @@ export default function NotesEditor({ projectId }: Props) {
       StarterKit,
       Placeholder.configure({ placeholder: 'Escribe aqui...' }),
       TableKit.configure({ table: { resizable: true } }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
     ],
     content: '',
     // La toolbar depende de isActive() (negrita, tabla, etc.): re-render por transacción
@@ -239,6 +242,15 @@ export default function NotesEditor({ projectId }: Props) {
               size="icon"
             >
               <Code className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => editor?.chain().focus().toggleTaskList().run()}
+              className={cn('h-7 w-7', editor?.isActive('taskList') && 'bg-accent')}
+              size="icon"
+              title="Checklist"
+            >
+              <ListChecks className="h-3.5 w-3.5" />
             </Button>
 
             <Separator orientation="vertical" className="h-5 mx-1" />
