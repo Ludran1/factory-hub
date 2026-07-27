@@ -20,6 +20,21 @@ import { cn } from '@/lib/utils'
 
 const MAX_IMAGE_BYTES = 1_500_000
 
+// Image con ancho persistente (para poder achicar/agrandar en el editor)
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.style.width || null,
+        renderHTML: (attrs: { width?: string | null }) =>
+          attrs.width ? { style: `width: ${attrs.width}` } : {},
+      },
+    }
+  },
+})
+
 const schema = z.object({
   title: z.string().min(1, 'Requerido'),
   priority: z.enum(['urgente', 'importante', 'alta', 'media', 'baja', 'delegar']),
@@ -85,7 +100,7 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
       Placeholder.configure({ placeholder: 'Descripción, checklist, imágenes (pegar captura funciona)...' }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Image.configure({ allowBase64: true }),
+      ResizableImage.configure({ allowBase64: true }),
     ],
     content: '',
     shouldRerenderOnTransaction: true,
@@ -227,6 +242,26 @@ export default function TaskModal({ open, onClose, objectives, task }: Props) {
                 >
                   <ImageIcon className="h-3.5 w-3.5" />
                 </Button>
+                {editor?.isActive('image') && (
+                  <>
+                    {([['S', '25%'], ['M', '50%'], ['L', '100%']] as const).map(([label, width]) => (
+                      <Button
+                        key={label}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'h-6 px-1.5 text-[11px]',
+                          editor?.getAttributes('image').width === width && 'bg-accent'
+                        )}
+                        title={`Imagen al ${width}`}
+                        onClick={() => editor?.chain().focus().updateAttributes('image', { width }).run()}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </>
+                )}
                 <input
                   ref={imageInputRef}
                   type="file"
