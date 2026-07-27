@@ -58,6 +58,33 @@ export function useCreateUser() {
   })
 }
 
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      // Borrar en auth.users requiere service role: pasa por la Edge Function
+      // delete-user (valida admin, bloquea auto-borrado y último admin).
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      })
+      if (error) {
+        let message = error.message
+        if (error instanceof FunctionsHttpError) {
+          try {
+            const body = await error.context.json()
+            if (body?.error) message = body.error
+          } catch { /* respuesta sin JSON */ }
+        }
+        throw new Error(message)
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      qc.invalidateQueries({ queryKey: ['profiles', 'all'] })
+    },
+  })
+}
+
 export function useUpdateUserRole() {
   const qc = useQueryClient()
   return useMutation({

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useUsers, useUpdateUserRole, useUpdateUserModules, useResetPassword } from '@/hooks/useUsers'
+import { useAuth } from '@/hooks/useAuth'
+import { useUsers, useUpdateUserRole, useUpdateUserModules, useResetPassword, useDeleteUser } from '@/hooks/useUsers'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Plus, UserPlus, KeyRound, Pencil } from 'lucide-react'
+import { Loader2, Plus, UserPlus, KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import UserModal, { ALL_MODULES } from '@/components/admin/UserModal'
 import type { Database, UserRole } from '@/types/database'
@@ -20,25 +21,31 @@ const roles: { value: UserRole; label: string }[] = [
   { value: 'marketing', label: 'Marketing' },
 ]
 
-const roleBadge: Record<UserRole, string> = {
-  admin: 'destructive',
-  developer: 'default',
-  support: 'warning',
-  closer: 'success',
-  marketing: 'secondary',
-}
-
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 export default function UsersPage() {
+  const { user: authUser } = useAuth()
   const { data: users = [], isLoading } = useUsers()
   const updateRole = useUpdateUserRole()
   const updateModules = useUpdateUserModules()
   const resetPassword = useResetPassword()
+  const deleteUser = useDeleteUser()
   const [showCreate, setShowCreate] = useState(false)
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
+  const [deletingUser, setDeletingUser] = useState<Profile | null>(null)
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return
+    try {
+      await deleteUser.mutateAsync({ userId: deletingUser.user_id })
+      toast.success(`Usuario ${deletingUser.name} eliminado`)
+      setDeletingUser(null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar usuario')
+    }
+  }
 
   const handleResetPassword = async (email: string | null, name: string) => {
     if (!email) {
@@ -183,6 +190,16 @@ export default function UsersPage() {
                         >
                           <KeyRound className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          title={user.user_id === authUser?.id ? 'No puedes eliminar tu propia cuenta' : 'Eliminar usuario'}
+                          onClick={() => setDeletingUser(user)}
+                          disabled={user.user_id === authUser?.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -200,6 +217,32 @@ export default function UsersPage() {
         mode="edit"
         user={editingUser}
       />
+
+      <Dialog open={!!deletingUser} onOpenChange={(open) => { if (!open) setDeletingUser(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Eliminar a {deletingUser?.name}</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán su cuenta, comentarios y
+              notificaciones; sus tareas y tickets quedarán sin asignar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingUser(null)} disabled={deleteUser.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={deleteUser.isPending}>
+              {deleteUser.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Eliminando...
+                </>
+              ) : (
+                'Eliminar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
