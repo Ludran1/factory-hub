@@ -3,8 +3,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, FolderOpen, Loader2, Users2 } from 'lucide-react'
-import { useProjects } from '@/hooks/useProjects'
+import { Plus, FolderOpen, Loader2, Users2, Trash2 } from 'lucide-react'
+import { useProjects, useDeleteProject } from '@/hooks/useProjects'
+import { toast } from 'sonner'
 import { useObjectives } from '@/hooks/useObjectives'
 import { useTasks } from '@/hooks/useTasks'
 import KanbanBoard from '@/components/desarrollo/KanbanBoard'
@@ -24,6 +25,7 @@ export default function DesarrolloPage() {
   const [editingTask, setEditingTask] = useState<Parameters<typeof TaskModal>[0]['task']>(null)
 
   const { data: projects = [], isLoading: loadingProjects } = useProjects()
+  const deleteProject = useDeleteProject()
   const activeProject = selectedProject ?? projects[0]?.id ?? null
 
   const { data: objectives = [], isLoading: loadingObjectives } = useObjectives(activeProject)
@@ -34,6 +36,25 @@ export default function DesarrolloPage() {
   const handleTaskClick = (task: Parameters<typeof TaskModal>[0]['task']) => {
     setEditingTask(task)
     setTaskModalOpen(true)
+  }
+
+  const handleDeleteProject = async () => {
+    if (!currentProject) return
+    const typed = window.prompt(
+      `Vas a borrar el proyecto "${currentProject.name}" con TODOS sus objetivos, tareas, notas y pizarras. Esta acción no se puede deshacer.\n\nEscribe el nombre del proyecto para confirmar:`
+    )
+    if (typed === null) return
+    if (typed.trim() !== currentProject.name) {
+      toast.error('El nombre no coincide — no se borró nada')
+      return
+    }
+    try {
+      await deleteProject.mutateAsync(currentProject.id)
+      setSelectedProject(null)
+      toast.success(`Proyecto "${currentProject.name}" eliminado`)
+    } catch {
+      toast.error('Error al borrar el proyecto')
+    }
   }
 
   const handleNewTask = () => {
@@ -106,6 +127,20 @@ export default function DesarrolloPage() {
             >
               <Users2 className="h-4 w-4" />
               Miembros
+            </Button>
+          )}
+          {activeProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={handleDeleteProject}
+              disabled={deleteProject.isPending}
+              title="Borrar proyecto"
+            >
+              {deleteProject.isPending
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Trash2 className="h-4 w-4" />}
             </Button>
           )}
           {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
