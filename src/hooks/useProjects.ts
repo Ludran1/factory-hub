@@ -42,9 +42,20 @@ export function useDeleteProject() {
 export function useCreateProject() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (project: { name: string; client: string; color: string }) => {
+    mutationFn: async ({ member_ids, ...project }: { name: string; client: string; color: string; member_ids?: string[] }) => {
       const { data, error } = await supabase.from('projects').insert(project).select().single()
       if (error) throw error
+      // El trigger ya agregó al creador como owner; acá van los miembros elegidos
+      // (ignoreDuplicates para no pisar la fila de owner del creador).
+      if (member_ids && member_ids.length > 0) {
+        const { error: membersError } = await supabase
+          .from('project_members')
+          .upsert(
+            member_ids.map(profile_id => ({ project_id: data.id, profile_id })),
+            { onConflict: 'project_id,profile_id', ignoreDuplicates: true }
+          )
+        if (membersError) throw membersError
+      }
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
