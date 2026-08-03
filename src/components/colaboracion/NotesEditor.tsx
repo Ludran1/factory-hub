@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -33,10 +33,18 @@ export default function NotesEditor({ projectId }: Props) {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [showNewNote, setShowNewNote] = useState(false)
   const [newNoteTitle, setNewNoteTitle] = useState('')
 
   const selectedNote = notes.find(n => n.id === selectedNoteId) ?? null
+
+  // Autosave: debounce tras dejar de escribir + flush al cambiar de nota/salir
+  const titleRef = useRef(title)
+  titleRef.current = title
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingContentRef = useRef(false)
+  const scheduleAutosaveRef = useRef<() => void>(() => {})
 
   const editor = useEditor({
     extensions: [
@@ -56,9 +64,46 @@ export default function NotesEditor({ projectId }: Props) {
     },
   })
 
+  const persistNote = useCallback(async (noteId: string, content: object, titleStr: string) => {
+    setSaving(true)
+    try {
+      await saveNote.mutateAsync({
+        id: noteId,
+        project_id: projectId,
+        title: titleStr.trim() || 'Sin titulo',
+        content,
+      })
+      setSavedAt(new Date())
+    } catch {
+      toast.error('Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId])
+
+  scheduleAutosaveRef.current = () => {
+    if (loadingContentRef.current || !selectedNote || !editor) return
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    const noteId = selectedNote.id
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null
+      if (editor) persistNote(noteId, editor.getJSON(), titleRef.current)
+    }, 1500)
+  }
+
+  // Autosave en cada cambio del editor
+  useEffect(() => {
+    if (!editor) return
+    const handler = () => scheduleAutosaveRef.current()
+    editor.on('update', handler)
+    return () => { editor.off('update', handler) }
+  }, [editor])
+
   // Load note content when selected note changes
   useEffect(() => {
     if (!editor) return
+    loadingContentRef.current = true
     if (selectedNote) {
       setTitle(selectedNote.title)
       editor.commands.setContent(selectedNote.content ?? '')
@@ -66,6 +111,17 @@ export default function NotesEditor({ projectId }: Props) {
       setTitle('')
       editor.commands.setContent('')
     }
+    loadingContentRef.current = false
+    return () => {
+      // Flush: si quedó un autosave pendiente de ESTA nota, guardarla ya
+      // (el editor todavía tiene su contenido en este punto)
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
+        if (selectedNote) persistNote(selectedNote.id, editor.getJSON(), titleRef.current)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNoteId, editor])
 
   // Auto-select first note
@@ -77,21 +133,13 @@ export default function NotesEditor({ projectId }: Props) {
 
   const handleSave = useCallback(async () => {
     if (!selectedNote || !editor) return
-    setSaving(true)
-    try {
-      await saveNote.mutateAsync({
-        id: selectedNote.id,
-        project_id: projectId,
-        title: title.trim() || 'Sin titulo',
-        content: editor.getJSON(),
-      })
-      toast.success('Nota guardada')
-    } catch {
-      toast.error('Error al guardar')
-    } finally {
-      setSaving(false)
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
     }
-  }, [selectedNote, editor, title, projectId])
+    await persistNote(selectedNote.id, editor.getJSON(), titleRef.current)
+    toast.success('Nota guardada')
+  }, [selectedNote, editor, persistNote])
 
   const handleCreateNote = async () => {
     if (!profile || !newNoteTitle.trim()) return
@@ -291,11 +339,15 @@ export default function NotesEditor({ projectId }: Props) {
 
             <div className="flex-1" />
 
-            {saving && (
+            {saving ? (
               <Badge variant="outline" className="text-xs gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" /> Guardando...
               </Badge>
-            )}
+            ) : savedAt ? (
+              <span className="text-[11px] text-muted-foreground">
+                Guardado {format(savedAt, 'HH:mm')}
+              </span>
+            ) : null}
             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={handleDelete}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -308,7 +360,7 @@ export default function NotesEditor({ projectId }: Props) {
           <div className="px-6 pt-4 pb-2">
             <Input
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={e => { setTitle(e.target.value); scheduleAutosaveRef.current() }}
               placeholder="Titulo de la nota"
               className="border-none shadow-none text-xl font-bold px-0 focus-visible:ring-0 bg-transparent h-auto"
             />
