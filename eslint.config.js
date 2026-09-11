@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .agents/.claude: skills instaladas de terceros (gokapso, supabase). Es
+  // código que no mantenemos nosotros y su lint no es asunto nuestro.
+  globalIgnores(['dist', '.agents', '.claude']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

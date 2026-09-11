@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Skills instaladas (npx skills add). Se trackea .agents/skills/ + skills-lock.json,
+# que es lo reproducible; .claude/skills son symlinks a rutas absolutas de la
+# máquina y se regeneran en cada install.
+.claude/
