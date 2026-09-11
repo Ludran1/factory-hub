@@ -8,7 +8,7 @@ export type TicketStatus = 'Abierto' | 'En Revisión' | 'Resuelto'
 
 export type LeadStage = 'prospecto' | 'demo' | 'negociacion' | 'cerrado'
 export type LeadSource = 'referido' | 'cold_outreach' | 'sitio_web' | 'evento' | 'redes_sociales' | 'otro'
-export type ActivityType = 'llamada' | 'reunion' | 'email' | 'nota'
+export type ActivityType = 'llamada' | 'reunion' | 'email' | 'nota' | 'whatsapp'
 export type ProjectMemberRole = 'owner' | 'contributor'
 
 export type Currency = 'PEN' | 'USD'
@@ -170,6 +170,8 @@ export interface Database {
           contact_email: string | null
           contact_phone: string | null
           product: string
+          /** Columna generada desde contact_phone. La app nunca la escribe. */
+          phone_e164: string | null
           value: number
           currency: Currency
           value_pen: number
@@ -184,7 +186,7 @@ export interface Database {
         // currency y value_pen tienen default en la DB y normalmente los escribe
         // respond_quote al aceptar una cotización, no el formulario de lead.
         Insert:
-          & Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at' | 'currency' | 'value_pen'>
+          & Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at' | 'currency' | 'value_pen' | 'phone_e164'>
           & Partial<Pick<Database['public']['Tables']['leads']['Row'], 'currency' | 'value_pen'>>
         Update: Partial<Database['public']['Tables']['leads']['Insert']>
         Relationships: []

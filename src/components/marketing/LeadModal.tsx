@@ -129,8 +129,10 @@ export default function LeadModal({ open, onClose, lead }: Props) {
               {errors.contact_email && <p className="text-xs text-destructive">{errors.contact_email.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Telefono</Label>
-              <Input placeholder="+1 234 567 8900" {...register('contact_phone')} />
+              <Label>Teléfono</Label>
+              {/* Se normaliza a E.164 en la DB (columna generada phone_e164),
+                  que es con lo que se cruza un WhatsApp entrante. */}
+              <Input placeholder="999 888 777" {...register('contact_phone')} />
             </div>
           </div>
 

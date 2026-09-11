@@ -11,7 +11,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import {
   Phone, Mail, DollarSign, Calendar, User, Pencil,
   Phone as PhoneIcon, Users, AtSign, FileText, Plus,
-  CheckSquare, Square, Loader2, Send
+  CheckSquare, Square, Loader2, Send, MessageCircle
 } from 'lucide-react'
 import { useLead, useUpdateLead, useAddLeadActivity, useAddLeadTask, useToggleLeadTask } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
@@ -31,15 +31,21 @@ const stageConfig: Record<LeadStage, { label: string; class: string }> = {
 }
 
 const activityIcons: Record<ActivityType, React.ReactNode> = {
-  llamada: <PhoneIcon className="h-3.5 w-3.5" />,
-  reunion: <Users className="h-3.5 w-3.5" />,
-  email:   <AtSign className="h-3.5 w-3.5" />,
-  nota:    <FileText className="h-3.5 w-3.5" />,
+  llamada:  <PhoneIcon className="h-3.5 w-3.5" />,
+  reunion:  <Users className="h-3.5 w-3.5" />,
+  email:    <AtSign className="h-3.5 w-3.5" />,
+  nota:     <FileText className="h-3.5 w-3.5" />,
+  whatsapp: <MessageCircle className="h-3.5 w-3.5" />,
 }
 
 const activityLabels: Record<ActivityType, string> = {
   llamada: 'Llamada', reunion: 'Reunión', email: 'Email', nota: 'Nota',
+  whatsapp: 'WhatsApp',
 }
+
+// Las de WhatsApp las escribe el webhook, no una persona: no tiene sentido
+// ofrecerlas en el selector de "registrar actividad".
+const ACTIVIDADES_MANUALES: ActivityType[] = ['llamada', 'reunion', 'email', 'nota']
 
 interface Props {
   leadId: string | null
@@ -249,7 +255,7 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(Object.entries(activityLabels) as [ActivityType, string][]).map(([v, l]) => (
+                        {ACTIVIDADES_MANUALES.map(v => [v, activityLabels[v]] as [ActivityType, string]).map(([v, l]) => (
                           <SelectItem key={v} value={v}>
                             <span className="flex items-center gap-1.5">{activityIcons[v]} {l}</span>
                           </SelectItem>

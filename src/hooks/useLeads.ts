@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { LeadStage, LeadSource } from '@/types/database'
+import type { LeadStage, LeadSource, ActivityType } from '@/types/database'
 
 export function useLeads(filters?: { stage?: string; search?: string; ownerId?: string }) {
   return useQuery({
@@ -95,7 +95,7 @@ export function useAddLeadActivity() {
   return useMutation({
     mutationFn: async ({ lead_id, author_id, type, body }: {
       lead_id: string; author_id: string
-      type: 'llamada' | 'reunion' | 'email' | 'nota'; body: string
+      type: ActivityType; body: string
     }) => {
       const { data, error } = await supabase.from('lead_activities').insert({ lead_id, author_id, type, body }).select().single()
       if (error) throw error

@@ -11,7 +11,7 @@ create type ticket_priority as enum ('urgente', 'alta', 'media', 'baja');
 create type ticket_status as enum ('Abierto', 'En Revisión', 'Resuelto');
 create type lead_stage as enum ('prospecto', 'demo', 'negociacion', 'cerrado');
 create type lead_source as enum ('referido', 'cold_outreach', 'sitio_web', 'evento', 'redes_sociales', 'otro');
-create type activity_type as enum ('llamada', 'reunion', 'email', 'nota');
+create type activity_type as enum ('llamada', 'reunion', 'email', 'nota', 'whatsapp');
 create type project_status as enum ('activo', 'pausado', 'completado');
 create type objective_status as enum ('pendiente', 'en_progreso', 'completado');
 
@@ -934,3 +934,178 @@ grant execute on function public.respond_quote(uuid, boolean, text) to anon, aut
 
 create trigger quotes_updated_at before update on quotes
   for each row execute function update_updated_at();
+
+-- =============================================
+-- TELÉFONO NORMALIZADO EN LEADS
+-- Snapshot de 20260911180000_lead_phone_e164.sql.
+-- =============================================
+returns text
+language sql
+immutable
+set search_path = public
+as $$
+  with d as (
+    -- Solo dígitos
+    select regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g') as v
+  ),
+  sin_prefijo as (
+    select case
+      -- 0051 999888777 / 051 999888777 → 51999888777
+      when v like '00%'  then substring(v from 3)
+      when v like '051%' then substring(v from 2)
+      -- 0999888777 (0 de larga distancia nacional)
+      when v like '0%' and length(v) = 10 then substring(v from 2)
+      else v
+    end as v
+    from d
+  )
+  select case
+    -- Celular peruano suelto: 9 dígitos empezando en 9
+    when length(v) = 9  and v like '9%'  then '51' || v
+    -- Ya viene con código de país
+    when length(v) = 11 and v like '519%' then v
+    -- Otro internacional razonable se deja como está. Un 0 acá significa que
+    -- el prefijo no se pudo interpretar (ej. "(01) 918 635 438", que mezcla
+    -- código de Lima con celular): mejor null que un número equivocado, porque
+    -- un número equivocado matchea el lead ajeno o le escribe a un desconocido.
+    when length(v) between 10 and 15 and v not like '0%' then v
+    else null
+  end
+  from sin_prefijo;
+$$;
+
+comment on function public.normalize_phone_pe(text) is
+  'E.164 sin +. Única fuente de verdad para normalizar teléfonos; ver migración 20260911180000.';
+
+-- Columna generada: imposible que se desincronice de contact_phone, porque la
+-- app no la escribe nunca.
+--
+-- OJO si algún día cambias normalize_phone_pe: los valores ya guardados NO se
+-- recalculan solos (una columna STORED se computa al escribir). Toca forzar
+-- la reescritura de las filas afectadas y verificar con:
+--   select count(*) from leads
+--   where phone_e164 is distinct from normalize_phone_pe(contact_phone);
+alter table leads add column phone_e164 text
+  generated always as (public.normalize_phone_pe(contact_phone)) stored;
+
+-- Índice NO único a propósito: la misma persona puede tener dos negocios y por
+-- lo tanto dos leads con el mismo celular. Un unique acá bloquearía un caso
+-- legítimo. La desambiguación es del lado del webhook: se toma el lead más
+-- reciente que coincida.
+create index leads_phone_e164_idx on leads(phone_e164) where phone_e164 is not null;
+
+-- Las conversaciones de WhatsApp se registran en lead_activities usando el
+-- valor 'whatsapp' del enum activity_type (declarado arriba). No hace falta
+-- tabla nueva: el timeline del lead ya es donde se mira la relación.
+
+-- =============================================
+-- WHATSAPP ENTRANTE
+-- Snapshot de 20260911190000_whatsapp_inbound.sql.
+-- =============================================
+-- Una actividad puede venir del cliente, que no tiene profile.
+-- Mismo criterio que quote_events.actor_id: null = no fue un miembro del equipo.
+alter table lead_activities alter column author_id drop not null;
+
+comment on column lead_activities.author_id is
+  'null = lo registró el cliente o una automatización, no un miembro del equipo.';
+
+-- Idempotencia de webhooks. Kapso reintenta ante timeout o 5xx; sin esto el
+-- mismo mensaje entra dos veces al timeline.
+alter table lead_activities add column external_id text;
+create unique index lead_activities_external_id_idx
+  on lead_activities(external_id) where external_id is not null;
+
+create or replace function public.handle_whatsapp_inbound(
+  p_phone text,
+  p_contact_name text,
+  p_text text,
+  p_wamid text,
+  p_conversation_id text default null,
+  p_product text default 'PeakGym'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_e164 text;
+  v_lead_id uuid;
+  v_created boolean := false;
+  v_nombre text;
+  v_body text;
+begin
+  v_e164 := normalize_phone_pe(p_phone);
+  if v_e164 is null then
+    -- Mejor descartar que adivinar: un número mal normalizado escribe en el
+    -- lead de otra persona.
+    return jsonb_build_object('ok', false, 'error', 'Teléfono no interpretable', 'phone', p_phone);
+  end if;
+
+  v_nombre := nullif(btrim(coalesce(p_contact_name, '')), '');
+  v_body   := nullif(btrim(coalesce(p_text, '')), '');
+
+  -- Lead más reciente con ese número. El índice no es único a propósito: la
+  -- misma persona puede tener dos negocios.
+  select id into v_lead_id
+  from leads
+  where phone_e164 = v_e164
+  order by created_at desc
+  limit 1;
+
+  if v_lead_id is null then
+    insert into leads (company, contact_name, contact_phone, product, source, stage, notes)
+    values (
+      coalesce(v_nombre, 'WhatsApp +' || v_e164),
+      coalesce(v_nombre, 'Sin nombre'),
+      v_e164,
+      p_product,
+      'redes_sociales',
+      'prospecto',
+      'Lead creado automáticamente desde WhatsApp el ' || to_char(now() at time zone 'America/Lima', 'DD/MM/YYYY HH24:MI') || '.'
+    )
+    returning id into v_lead_id;
+    v_created := true;
+  end if;
+
+  -- on conflict do nothing: el reintento del webhook no duplica el timeline.
+  insert into lead_activities (lead_id, author_id, type, body, external_id)
+  values (
+    v_lead_id,
+    null,
+    'whatsapp',
+    coalesce(v_body, '(mensaje sin texto)'),
+    p_wamid
+  )
+  on conflict (external_id) where external_id is not null do nothing;
+
+  -- Avisar solo del lead nuevo. Notificar cada mensaje convertiría la campanita
+  -- en ruido y dejaría de mirarse.
+  --
+  -- El criterio de "quién trabaja leads" es el mismo que usa useClosers() en la
+  -- app: rol comercial o acceso explícito al módulo marketing. Si acá fuera
+  -- distinto, habría gente que ve el lead en el CRM pero nunca se entera de que
+  -- entró.
+  if v_created then
+    insert into notifications (user_id, type, message, link)
+    select p.id, 'whatsapp_lead',
+           'Nuevo lead por WhatsApp: ' || coalesce(v_nombre, '+' || v_e164),
+           '/marketing'
+    from profiles p
+    where p.role in ('admin', 'closer', 'marketing')
+       or (p.allowed_modules is not null and 'marketing' = any(p.allowed_modules));
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'lead_id', v_lead_id,
+    'created', v_created,
+    'phone_e164', v_e164,
+    'conversation_id', p_conversation_id
+  );
+end;
+$$;
+
+-- Solo la llama la Edge Function con service role. Nadie más.
+revoke execute on function public.handle_whatsapp_inbound(text, text, text, text, text, text)
+  from public, anon, authenticated;
