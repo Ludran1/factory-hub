@@ -11,6 +11,35 @@ export type LeadSource = 'referido' | 'cold_outreach' | 'sitio_web' | 'evento' |
 export type ActivityType = 'llamada' | 'reunion' | 'email' | 'nota'
 export type ProjectMemberRole = 'owner' | 'contributor'
 
+export type Currency = 'PEN' | 'USD'
+export type QuoteStatus = 'borrador' | 'enviada' | 'aceptada' | 'rechazada' | 'vencida'
+export type QuoteEventType = 'creada' | 'enviada' | 'vista' | 'aceptada' | 'rechazada' | 'revisada'
+
+export type Quote = Database['public']['Tables']['quotes']['Row']
+/** Lo que el cliente puede escribir: sin correlativo ni totales, que son del servidor. */
+export type QuoteUpdate = Database['public']['Tables']['quotes']['Update']
+export type QuoteItem = Database['public']['Tables']['quote_items']['Row']
+export type QuoteEvent = Database['public']['Tables']['quote_events']['Row']
+export type OrgSettings = Database['public']['Tables']['org_settings']['Row']
+
+export interface QuoteEmitter {
+  legal_name: string
+  ruc: string
+  address: string | null
+  email: string | null
+  phone: string | null
+  website: string | null
+  logo_base64: string | null
+}
+
+/** Lo que devuelve get_public_quote: sin token, owner, lead ni total_pen. */
+export interface PublicQuotePayload {
+  quote: Omit<Quote, 'public_token' | 'owner_id' | 'lead_id' | 'parent_quote_id' | 'total_pen'>
+  items: QuoteItem[]
+  emitter: QuoteEmitter
+  expired: boolean
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -142,6 +171,8 @@ export interface Database {
           contact_phone: string | null
           product: string
           value: number
+          currency: Currency
+          value_pen: number
           stage: LeadStage
           source: LeadSource
           owner_id: string | null
@@ -150,7 +181,11 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at'>
+        // currency y value_pen tienen default en la DB y normalmente los escribe
+        // respond_quote al aceptar una cotización, no el formulario de lead.
+        Insert:
+          & Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at' | 'currency' | 'value_pen'>
+          & Partial<Pick<Database['public']['Tables']['leads']['Row'], 'currency' | 'value_pen'>>
         Update: Partial<Database['public']['Tables']['leads']['Insert']>
         Relationships: []
       }
@@ -232,12 +267,133 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>
         Relationships: []
       }
+      quotes: {
+        Row: {
+          id: string
+          lead_id: string | null
+          number: string
+          version: number
+          parent_quote_id: string | null
+          client_company: string
+          client_contact: string | null
+          client_email: string | null
+          client_doc: string | null
+          client_address: string | null
+          title: string
+          currency: Currency
+          fx_rate: number
+          issue_date: string
+          valid_until: string | null
+          status: QuoteStatus
+          igv_rate: number
+          subtotal: number
+          discount: number
+          igv: number
+          total: number
+          total_pen: number
+          terms: string | null
+          owner_id: string | null
+          public_token: string
+          sent_at: string | null
+          accepted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        // number lo asigna un trigger; los totales los calcula otro. Nada de eso
+        // se manda desde el cliente (ver supabase/migrations/20260911120000_quotes.sql).
+        Insert:
+          & Omit<
+              Database['public']['Tables']['quotes']['Row'],
+              'id' | 'number' | 'version' | 'subtotal' | 'discount' | 'igv' | 'total' | 'total_pen'
+              | 'public_token' | 'status' | 'issue_date' | 'igv_rate' | 'fx_rate' | 'currency'
+              | 'parent_quote_id' | 'sent_at' | 'accepted_at' | 'created_at' | 'updated_at'
+            >
+          & Partial<Pick<
+              Database['public']['Tables']['quotes']['Row'],
+              'version' | 'status' | 'issue_date' | 'igv_rate' | 'fx_rate' | 'currency' | 'parent_quote_id'
+            >>
+        Update: Partial<Database['public']['Tables']['quotes']['Insert'] & {
+          status: QuoteStatus
+          sent_at: string | null
+          accepted_at: string | null
+        }>
+        Relationships: []
+      }
+      quote_items: {
+        Row: {
+          id: string
+          quote_id: string
+          description: string
+          detail: string | null
+          qty: number
+          unit_price: number
+          discount: number
+          position: number
+        }
+        Insert: Omit<Database['public']['Tables']['quote_items']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['quote_items']['Insert']>
+        Relationships: []
+      }
+      quote_events: {
+        Row: {
+          id: string
+          quote_id: string
+          type: QuoteEventType
+          actor_id: string | null
+          meta: Record<string, unknown> | null
+          created_at: string
+        }
+        // Solo los escribe el servidor: quote_events no tiene policy de insert.
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      org_settings: {
+        Row: {
+          id: boolean
+          legal_name: string
+          ruc: string
+          address: string | null
+          email: string | null
+          phone: string | null
+          website: string | null
+          logo_base64: string | null
+          default_terms: string | null
+          updated_at: string
+        }
+        Insert: never
+        Update: Partial<Omit<Database['public']['Tables']['org_settings']['Row'], 'id'>>
+        Relationships: []
+      }
+      fx_rates: {
+        Row: {
+          date: string
+          usd_pen: number
+          source: string
+          fetched_at: string
+        }
+        // La escribe solo la Edge Function fx-rate con service role.
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_public_quote: {
+        Args: { p_token: string }
+        Returns: PublicQuotePayload | null
+      }
+      log_quote_view: {
+        Args: { p_token: string }
+        Returns: void
+      }
+      respond_quote: {
+        Args: { p_token: string; p_accept: boolean; p_signer: string }
+        Returns: { ok: boolean; error?: string }
+      }
     }
     Enums: {
       [_ in never]: never

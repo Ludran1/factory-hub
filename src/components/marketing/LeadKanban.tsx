@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { DollarSign, GripVertical } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
 import { useUpdateLead } from '@/hooks/useLeads'
+import { formatMoney, formatMoneyShort } from '@/lib/quotes'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { LeadStage } from '@/types/database'
+import type { LeadStage, Currency } from '@/types/database'
 
 const STAGES: { key: LeadStage; label: string; color: string }[] = [
   { key: 'prospecto',   label: 'Prospecto',   color: 'border-t-slate-400' },
@@ -21,6 +22,8 @@ interface Lead {
   contact_name: string
   product: string
   value: number
+  currency: string
+  value_pen: number
   stage: string
   owner: { name: string } | null
 }
@@ -36,7 +39,8 @@ export default function LeadKanban({ leads, onLeadClick }: Props) {
   const updateLead = useUpdateLead()
 
   const leadsInStage = (stage: LeadStage) => leads.filter(l => l.stage === stage)
-  const stageTotal = (stage: LeadStage) => leadsInStage(stage).reduce((s, l) => s + l.value, 0)
+  // El total de columna suma value_pen: mezclar monedas daría un número falso.
+  const stageTotal = (stage: LeadStage) => leadsInStage(stage).reduce((s, l) => s + l.value_pen, 0)
 
   const handleDrop = async (stage: LeadStage) => {
     if (!draggedId) return
@@ -83,9 +87,8 @@ export default function LeadKanban({ leads, onLeadClick }: Props) {
                   {stageLeads.length}
                 </span>
               </div>
-              <div className="flex items-center gap-0.5 text-xs text-muted-foreground font-medium">
-                <DollarSign className="h-3 w-3" />
-                {total >= 1000 ? `${(total / 1000).toFixed(0)}k` : total}
+              <div className="flex items-center gap-0.5 text-xs text-muted-foreground font-medium tabular-nums">
+                {formatMoneyShort(total)}
               </div>
             </div>
 
@@ -113,8 +116,8 @@ export default function LeadKanban({ leads, onLeadClick }: Props) {
                     </div>
                     <div className="flex items-center justify-between pl-6">
                       <Badge variant="outline" className="text-xs py-0">{lead.product}</Badge>
-                      <span className="text-xs font-semibold text-primary">
-                        ${lead.value.toLocaleString()}
+                      <span className="text-xs font-semibold text-primary tabular-nums">
+                        {formatMoney(lead.value, lead.currency as Currency)}
                       </span>
                     </div>
                     {lead.owner && (

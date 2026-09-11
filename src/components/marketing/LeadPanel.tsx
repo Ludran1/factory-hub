@@ -15,11 +15,13 @@ import {
 } from 'lucide-react'
 import { useLead, useUpdateLead, useAddLeadActivity, useAddLeadTask, useToggleLeadTask } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
+import QuoteSection from '@/components/marketing/QuoteSection'
+import { formatMoney } from '@/lib/quotes'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { LeadStage, ActivityType } from '@/types/database'
+import type { LeadStage, ActivityType, Currency } from '@/types/database'
 
 const stageConfig: Record<LeadStage, { label: string; class: string }> = {
   prospecto:   { label: 'Prospecto',   class: 'bg-slate-500/10 text-slate-500 border-slate-500/30' },
@@ -51,7 +53,7 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
   const [newTask, setNewTask] = useState('')
   const [taskDue, setTaskDue] = useState('')
 
-  const { profile } = useAuth()
+  const { profile, role } = useAuth()
   const { data: lead, isLoading } = useLead(leadId)
   const updateLead = useUpdateLead()
   const addActivity = useAddLeadActivity()
@@ -134,7 +136,9 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                 )}
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <DollarSign className="h-3.5 w-3.5 shrink-0" />
-                  <span className="font-semibold text-foreground">${lead.value.toLocaleString()}</span>
+                  <span className="font-semibold text-foreground">
+                    {formatMoney(lead.value, lead.currency as Currency)}
+                  </span>
                 </div>
                 {lead.expected_close_date && (
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -168,6 +172,21 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                   </SelectContent>
                 </Select>
               </div>
+
+              <Separator />
+
+              {/* Cotizaciones — la entrada principal al módulo */}
+              <QuoteSection
+                lead={{
+                  id: lead.id,
+                  company: lead.company,
+                  contact_name: lead.contact_name,
+                  contact_email: lead.contact_email,
+                  owner_id: lead.owner_id,
+                  product: lead.product,
+                }}
+                canEdit={role === 'admin' || role === 'closer'}
+              />
 
               <Separator />
 

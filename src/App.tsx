@@ -17,6 +17,8 @@ const SoportePage = lazy(() => import('@/pages/SoportePage'))
 const MarketingPage = lazy(() => import('@/pages/MarketingPage'))
 const ColaboracionPage = lazy(() => import('@/pages/ColaboracionPage'))
 const UsersPage = lazy(() => import('@/pages/UsersPage'))
+const QuotePage = lazy(() => import('@/pages/QuotePage'))
+const PublicQuotePage = lazy(() => import('@/pages/PublicQuotePage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +62,12 @@ function AppRoutes() {
         path="/login"
         element={user ? <Navigate to="/" replace /> : <LoginPage />}
       />
+      {/* Cotización pública: fuera de ProtectedRoute y de AppLayout.
+          Quien la abre es el cliente, que no tiene cuenta. */}
+      <Route
+        path="/p/:token"
+        element={<LazyRoute><PublicQuotePage /></LazyRoute>}
+      />
       <Route
         path="/"
         element={
@@ -72,6 +80,7 @@ function AppRoutes() {
         <Route path="desarrollo" element={<LazyRoute><DesarrolloPage /></LazyRoute>} />
         <Route path="colaboracion" element={<LazyRoute><ColaboracionPage /></LazyRoute>} />
         <Route path="marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
+        <Route path="marketing/cotizacion/:id" element={<LazyRoute><QuotePage /></LazyRoute>} />
         <Route path="soporte" element={<LazyRoute><SoportePage /></LazyRoute>} />
         <Route path="usuarios" element={<LazyRoute><UsersPage /></LazyRoute>} />
       </Route>

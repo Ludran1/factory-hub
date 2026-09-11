@@ -7,16 +7,19 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Search, DollarSign, TrendingUp, Target, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Search, DollarSign, TrendingUp, Target, Users, Loader2, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react'
 import { useLeads } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
 import LeadKanban from '@/components/marketing/LeadKanban'
 import LeadPanel from '@/components/marketing/LeadPanel'
 import LeadModal from '@/components/marketing/LeadModal'
+import QuoteList from '@/components/marketing/QuoteList'
+import EmitterSettingsDialog from '@/components/marketing/EmitterSettingsDialog'
+import { formatMoney, formatMoneyShort } from '@/lib/quotes'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import type { LeadStage } from '@/types/database'
+import type { LeadStage, Currency } from '@/types/database'
 
 const PAGE_SIZE = 10
 
@@ -41,6 +44,9 @@ export default function MarketingPage() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingLead, setEditingLead] = useState<Parameters<typeof LeadModal>[0]['lead']>(null)
+  const [emitterOpen, setEmitterOpen] = useState(false)
+  const [tab, setTab] = useState('pipeline')
+  const [quoteStatus, setQuoteStatus] = useState('all')
 
   // Closers only see their own leads
   const ownerId = role === 'closer' ? profile?.id : undefined
@@ -51,9 +57,10 @@ export default function MarketingPage() {
     ownerId,
   })
 
-  // Metrics
-  const totalValue = leads.reduce((s, l) => s + l.value, 0)
-  const closedValue = leads.filter(l => l.stage === 'cerrado').reduce((s, l) => s + l.value, 0)
+  // Métricas: siempre sobre value_pen. Sumar `value` mezclaría soles con
+  // dólares en cuanto exista una cotización en USD.
+  const totalValue = leads.reduce((s, l) => s + l.value_pen, 0)
+  const closedValue = leads.filter(l => l.stage === 'cerrado').reduce((s, l) => s + l.value_pen, 0)
   const conversionRate = leads.length > 0
     ? Math.round((leads.filter(l => l.stage === 'cerrado').length / leads.length) * 100)
     : 0
@@ -91,10 +98,10 @@ export default function MarketingPage() {
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Pipeline total', value: `$${(totalValue / 1000).toFixed(0)}k`, icon: <DollarSign className="h-4 w-4 text-primary" />, sub: `${leads.length} leads` },
-          { label: 'Cerrado', value: `$${(closedValue / 1000).toFixed(0)}k`, icon: <Target className="h-4 w-4 text-emerald-500" />, sub: `${leads.filter(l => l.stage === 'cerrado').length} deals` },
+          { label: 'Pipeline total', value: formatMoneyShort(totalValue), icon: <DollarSign className="h-4 w-4 text-primary" />, sub: `${leads.length} leads` },
+          { label: 'Cerrado', value: formatMoneyShort(closedValue), icon: <Target className="h-4 w-4 text-emerald-500" />, sub: `${leads.filter(l => l.stage === 'cerrado').length} deals` },
           { label: 'Conversion', value: `${conversionRate}%`, icon: <TrendingUp className="h-4 w-4 text-blue-500" />, sub: 'tasa de cierre' },
-          { label: 'En negociacion', value: leads.filter(l => l.stage === 'negociacion').length.toString(), icon: <Users className="h-4 w-4 text-amber-500" />, sub: `$${(leads.filter(l => l.stage === 'negociacion').reduce((s, l) => s + l.value, 0) / 1000).toFixed(0)}k` },
+          { label: 'En negociacion', value: leads.filter(l => l.stage === 'negociacion').length.toString(), icon: <Users className="h-4 w-4 text-amber-500" />, sub: formatMoneyShort(leads.filter(l => l.stage === 'negociacion').reduce((s, l) => s + l.value_pen, 0)) },
         ].map(m => (
           <Card key={m.label} className="py-0">
             <CardContent className="p-4 flex items-center gap-3">
@@ -112,11 +119,12 @@ export default function MarketingPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="pipeline">
+      <Tabs value={tab} onValueChange={setTab}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
             <TabsTrigger value="tabla">Tabla</TabsTrigger>
+            <TabsTrigger value="cotizaciones">Cotizaciones</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             <div className="relative">
@@ -128,17 +136,44 @@ export default function MarketingPage() {
                 className="pl-9 h-9 w-48"
               />
             </div>
-            <Select value={stageFilter} onValueChange={v => { setStageFilter(v); setPage(0) }}>
-              <SelectTrigger className="h-9 w-36">
-                <SelectValue placeholder="Etapa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las etapas</SelectItem>
-                {(Object.entries(stageConfig) as [LeadStage, { label: string }][]).map(([v, c]) => (
-                  <SelectItem key={v} value={v}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* La etapa es del lead y el estado es de la cotización: cada
+                pestaña filtra por lo suyo. */}
+            {tab === 'cotizaciones' ? (
+              <Select value={quoteStatus} onValueChange={setQuoteStatus}>
+                <SelectTrigger className="h-9 w-36">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="borrador">Borrador</SelectItem>
+                  <SelectItem value="enviada">Enviada</SelectItem>
+                  <SelectItem value="aceptada">Aceptada</SelectItem>
+                  <SelectItem value="rechazada">Rechazada</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={stageFilter} onValueChange={v => { setStageFilter(v); setPage(0) }}>
+                <SelectTrigger className="h-9 w-36">
+                  <SelectValue placeholder="Etapa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las etapas</SelectItem>
+                  {(Object.entries(stageConfig) as [LeadStage, { label: string }][]).map(([v, c]) => (
+                    <SelectItem key={v} value={v}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {role === 'admin' && (
+              <Button
+                variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                onClick={() => setEmitterOpen(true)}
+                title="Datos del emisor"
+                aria-label="Datos del emisor"
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
@@ -184,8 +219,8 @@ export default function MarketingPage() {
                           <TableCell>
                             <Badge variant="outline" className="text-xs">{lead.product}</Badge>
                           </TableCell>
-                          <TableCell className="text-sm font-semibold text-primary">
-                            ${lead.value.toLocaleString()}
+                          <TableCell className="text-sm font-semibold text-primary tabular-nums">
+                            {formatMoney(lead.value, lead.currency as Currency)}
                           </TableCell>
                           <TableCell>
                             <Badge className={cn('text-xs', stageConfig[lead.stage as LeadStage].class)}>
@@ -235,6 +270,11 @@ export default function MarketingPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Cotizaciones */}
+        <TabsContent value="cotizaciones">
+          <QuoteList status={quoteStatus} search={search} ownerId={ownerId} />
+        </TabsContent>
       </Tabs>
 
       {/* Lead panel + modal */}
@@ -248,6 +288,7 @@ export default function MarketingPage() {
         onClose={() => { setModalOpen(false); setEditingLead(null) }}
         lead={editingLead}
       />
+      <EmitterSettingsDialog open={emitterOpen} onClose={() => setEmitterOpen(false)} />
     </div>
   )
 }
