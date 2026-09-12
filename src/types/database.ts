@@ -279,6 +279,9 @@ export interface Database {
           client_company: string
           client_contact: string | null
           client_email: string | null
+          client_phone: string | null
+          /** Columna generada desde client_phone. La app nunca la escribe. */
+          client_phone_e164: string | null
           client_doc: string | null
           client_address: string | null
           title: string
@@ -309,6 +312,7 @@ export interface Database {
               'id' | 'number' | 'version' | 'subtotal' | 'discount' | 'igv' | 'total' | 'total_pen'
               | 'public_token' | 'status' | 'issue_date' | 'igv_rate' | 'fx_rate' | 'currency'
               | 'parent_quote_id' | 'sent_at' | 'accepted_at' | 'created_at' | 'updated_at'
+              | 'client_phone_e164'
             >
           & Partial<Pick<
               Database['public']['Tables']['quotes']['Row'],

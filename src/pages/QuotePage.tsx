@@ -12,10 +12,10 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   ArrowLeft, Send, Copy, Printer, Trash2, Loader2, RefreshCw,
-  FileText, Eye, CheckCircle2, XCircle, Clock, PenLine, Files,
+  FileText, Eye, CheckCircle2, XCircle, Clock, PenLine, Files, MessageCircle,
 } from 'lucide-react'
 import {
-  useQuote, useUpdateQuote, useSendQuote, useDeleteQuote, useDuplicateQuote,
+  useQuote, useUpdateQuote, useSendQuote, useDeleteQuote, useDuplicateQuote, useSendQuoteWhatsApp,
 } from '@/hooks/useQuotes'
 import { useOrgSettings } from '@/hooks/useOrgSettings'
 import { useFxRate } from '@/hooks/useFxRate'
@@ -42,12 +42,12 @@ const eventConfig: Record<string, { label: string; icon: React.ReactNode }> = {
 
 const EMPTY_FORM = {
   title: '', client_company: '', client_contact: '', client_email: '',
-  client_doc: '', client_address: '', valid_until: '', terms: '',
+  client_phone: '', client_doc: '', client_address: '', valid_until: '', terms: '',
 }
 
 function formFromQuote(q: {
   title: string; client_company: string; client_contact: string | null
-  client_email: string | null; client_doc: string | null
+  client_email: string | null; client_phone: string | null; client_doc: string | null
   client_address: string | null; valid_until: string | null; terms: string | null
 }): typeof EMPTY_FORM {
   return {
@@ -55,6 +55,7 @@ function formFromQuote(q: {
     client_company: q.client_company,
     client_contact: q.client_contact ?? '',
     client_email: q.client_email ?? '',
+    client_phone: q.client_phone ?? '',
     client_doc: q.client_doc ?? '',
     client_address: q.client_address ?? '',
     valid_until: q.valid_until ?? '',
@@ -73,6 +74,7 @@ export default function QuotePage() {
   const sendQuote = useSendQuote()
   const deleteQuote = useDeleteQuote()
   const duplicateQuote = useDuplicateQuote()
+  const sendWhatsApp = useSendQuoteWhatsApp()
 
   const [form, setForm] = useState(EMPTY_FORM)
   const [formQuoteId, setFormQuoteId] = useState<string | null>(null)
@@ -158,6 +160,17 @@ export default function QuotePage() {
     }
   }
 
+  const handleSendWhatsApp = async () => {
+    try {
+      await sendWhatsApp.mutateAsync(quote.id)
+      toast.success('Cotización enviada por WhatsApp')
+    } catch (e) {
+      // El motivo real importa: "la plantilla no está aprobada" y "el número es
+      // inválido" se arreglan de formas muy distintas.
+      toast.error(e instanceof Error ? e.message : 'No se pudo enviar por WhatsApp')
+    }
+  }
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(publicQuoteUrl(quote.public_token))
@@ -217,6 +230,16 @@ export default function QuotePage() {
           )}
           {!isDraft && (
             <>
+              <Button
+                size="sm"
+                onClick={handleSendWhatsApp}
+                disabled={sendWhatsApp.isPending || !quote.client_phone_e164}
+                title={quote.client_phone_e164
+                  ? `Enviar a +${quote.client_phone_e164}`
+                  : 'La cotización no tiene un teléfono válido'}
+              >
+                <MessageCircle className="h-4 w-4" /> WhatsApp
+              </Button>
               <Button size="sm" variant="outline" onClick={handleCopyLink}>
                 <Copy className="h-4 w-4" /> Copiar link
               </Button>
@@ -316,6 +339,23 @@ export default function QuotePage() {
                         onChange={e => setForm({ ...form, client_email: e.target.value })}
                         onBlur={e => saveField({ client_email: e.target.value })}
                       />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>WhatsApp</Label>
+                      <Input
+                        value={form.client_phone}
+                        disabled={!isDraft}
+                        placeholder="999 888 777"
+                        onChange={e => setForm({ ...form, client_phone: e.target.value })}
+                        onBlur={e => saveField({ client_phone: e.target.value })}
+                      />
+                      {/* client_phone_e164 es columna generada: si sale null, el
+                          número no se pudo interpretar y el envío va a fallar. */}
+                      {form.client_phone && !quote.client_phone_e164 && (
+                        <p className="text-xs text-amber-500">
+                          No se entiende como número: no se va a poder enviar por WhatsApp.
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1.5 col-span-2">
                       <Label>Dirección</Label>

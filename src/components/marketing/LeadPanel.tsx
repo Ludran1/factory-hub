@@ -188,6 +188,7 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                   company: lead.company,
                   contact_name: lead.contact_name,
                   contact_email: lead.contact_email,
+                  contact_phone: lead.contact_phone,
                   owner_id: lead.owner_id,
                   product: lead.product,
                 }}

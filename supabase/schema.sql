@@ -1109,3 +1109,12 @@ $$;
 -- Solo la llama la Edge Function con service role. Nadie más.
 revoke execute on function public.handle_whatsapp_inbound(text, text, text, text, text, text)
   from public, anon, authenticated;
+
+-- =============================================
+-- TELÉFONO EN EL SNAPSHOT DE LA COTIZACIÓN
+-- Snapshot de 20260911200000_quote_client_phone.sql.
+-- =============================================
+alter table quotes add column client_phone text;
+
+alter table quotes add column client_phone_e164 text
+  generated always as (public.normalize_phone_pe(client_phone)) stored;

@@ -68,6 +68,7 @@ interface LeadSnapshot {
   company: string
   contact_name: string | null
   contact_email: string | null
+  contact_phone: string | null
   owner_id: string | null
   product?: string | null
 }
@@ -92,6 +93,7 @@ export function useCreateQuote() {
           client_company: lead.company,
           client_contact: lead.contact_name,
           client_email: lead.contact_email,
+          client_phone: lead.contact_phone,
           client_doc: null,
           client_address: null,
           title: title || `Propuesta ${lead.product ?? ''}`.trim(),
@@ -188,6 +190,7 @@ export function useDuplicateQuote() {
           client_company: source.client_company,
           client_contact: source.client_contact,
           client_email: source.client_email,
+          client_phone: source.client_phone,
           client_doc: source.client_doc,
           client_address: source.client_address,
           title: source.title,
@@ -262,6 +265,34 @@ export function useDeleteQuoteItem() {
       return quote_id
     },
     onSuccess: (quote_id) => qc.invalidateQueries({ queryKey: ['quote', quote_id] }),
+  })
+}
+
+/**
+ * Manda la cotización por WhatsApp como plantilla aprobada. Texto libre no
+ * sirve: fuera de la ventana de 24h Meta solo entrega plantillas.
+ */
+export function useSendQuoteWhatsApp() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (quoteId: string) => {
+      const { data, error } = await supabase.functions.invoke<{ ok?: boolean; error?: string; to?: string }>(
+        'whatsapp-send-quote',
+        { body: { quote_id: quoteId } },
+      )
+      // La función devuelve el motivo real en el body incluso con status de
+      // error; el mensaje genérico de FunctionsHttpError no ayuda a nadie.
+      if (error) {
+        const detalle = await (error as { context?: Response }).context?.json?.().catch(() => null)
+        throw new Error(detalle?.error ?? error.message)
+      }
+      if (data?.error) throw new Error(data.error)
+      return data
+    },
+    onSuccess: (_, quoteId) => {
+      qc.invalidateQueries({ queryKey: ['quote', quoteId] })
+      qc.invalidateQueries({ queryKey: ['quotes'] })
+    },
   })
 }
 

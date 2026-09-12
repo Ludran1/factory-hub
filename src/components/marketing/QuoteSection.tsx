@@ -16,6 +16,7 @@ interface Props {
     company: string
     contact_name: string | null
     contact_email: string | null
+    contact_phone: string | null
     owner_id: string | null
     product?: string | null
   }
