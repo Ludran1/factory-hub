@@ -1272,3 +1272,19 @@ revoke execute on function public.handle_whatsapp_inbound(text, text, text, text
 -- =============================================
 alter table tasks add column has_description boolean
   generated always as (description is not null) stored;
+
+-- =============================================
+-- BANDEJA DE WHATSAPP INCRUSTADA
+-- Snapshot de 20260913080000_kapso_inbox_embeds.sql. Sin policies a propósito:
+-- el embed_url lleva un token con acceso a las conversaciones y solo lo lee la
+-- Edge Function kapso-inbox-embed con service role.
+-- =============================================
+create table kapso_inbox_embeds (
+  phone_number_id text primary key,
+  kapso_embed_id text,
+  embed_url text not null,
+  allowed_origins text[] not null,
+  created_at timestamptz default now()
+);
+
+alter table kapso_inbox_embeds enable row level security;

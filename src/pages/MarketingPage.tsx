@@ -15,6 +15,7 @@ import LeadPanel from '@/components/marketing/LeadPanel'
 import LeadModal from '@/components/marketing/LeadModal'
 import QuoteList from '@/components/marketing/QuoteList'
 import EmitterSettingsDialog from '@/components/marketing/EmitterSettingsDialog'
+import WhatsAppInbox from '@/components/marketing/WhatsAppInbox'
 import { formatMoney, formatMoneyShort } from '@/lib/quotes'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -125,8 +126,10 @@ export default function MarketingPage() {
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
             <TabsTrigger value="tabla">Tabla</TabsTrigger>
             <TabsTrigger value="cotizaciones">Cotizaciones</TabsTrigger>
+            <TabsTrigger value="chat">Chat</TabsTrigger>
           </TabsList>
-          <div className="flex gap-2">
+          {/* Búsqueda y filtros no aplican a la bandeja de WhatsApp. */}
+          <div className={cn('flex gap-2', tab === 'chat' && 'hidden')}>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -274,6 +277,11 @@ export default function MarketingPage() {
         {/* Cotizaciones */}
         <TabsContent value="cotizaciones">
           <QuoteList status={quoteStatus} search={search} ownerId={ownerId} />
+        </TabsContent>
+
+        {/* Chat: la bandeja de WhatsApp de Kapso. Solo se monta con la pestaña abierta. */}
+        <TabsContent value="chat">
+          <WhatsAppInbox />
         </TabsContent>
       </Tabs>
 
