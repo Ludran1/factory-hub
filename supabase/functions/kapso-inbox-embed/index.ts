@@ -10,9 +10,11 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const KAPSO_API_KEY = Deno.env.get('KAPSO_API_KEY')
-const KAPSO_PHONE_NUMBER_ID = Deno.env.get('KAPSO_PHONE_NUMBER_ID')
-const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL')
+// trim(): un espacio o salto de línea pegado en el dashboard de Supabase hace que
+// Kapso no encuentre el número y el error no dice por qué.
+const KAPSO_API_KEY = Deno.env.get('KAPSO_API_KEY')?.trim()
+const KAPSO_PHONE_NUMBER_ID = Deno.env.get('KAPSO_PHONE_NUMBER_ID')?.trim()
+const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL')?.trim()
 const KAPSO_PLATFORM_API = 'https://api.kapso.ai/platform/v1'
 
 const corsHeaders = {
@@ -33,6 +35,28 @@ function origenesPermitidos(): string[] {
   const origenes = new Set<string>(['http://localhost:5173'])
   if (PUBLIC_APP_URL) origenes.add(new URL(PUBLIC_APP_URL).origin)
   return [...origenes]
+}
+
+/**
+ * Qué números de WhatsApp puede ver la API key configurada. Solo se usa para
+ * explicar un 404: "Phone number not found" casi siempre significa que la key es
+ * de otro proyecto de Kapso (el de los gimnasios, por ejemplo) y no del que tiene
+ * el número de ventas. Devuelve ids y números visibles, nada secreto.
+ */
+async function numerosVisiblesPorLaKey(): Promise<{ id: string; numero: string }[] | null> {
+  try {
+    const res = await fetch(`${KAPSO_PLATFORM_API}/whatsapp/phone_numbers?per_page=50`, {
+      headers: { 'X-API-Key': KAPSO_API_KEY! },
+    })
+    if (!res.ok) return null
+    const body = await res.json() as { data?: { phone_number_id?: string; display_phone_number?: string | null; name?: string | null }[] }
+    return (body.data ?? []).map(n => ({
+      id: String(n.phone_number_id ?? ''),
+      numero: n.display_phone_number || n.name || 'sin número visible',
+    }))
+  } catch {
+    return null
+  }
 }
 
 Deno.serve(async (req) => {
@@ -96,6 +120,22 @@ Deno.serve(async (req) => {
     try { body = raw ? JSON.parse(raw) : {} } catch { /* no era JSON */ }
     const embedUrl = body?.data?.embed_url
     const embedId = body?.data?.id
+
+    if (res.status === 404) {
+      const visibles = await numerosVisiblesPorLaKey()
+      const loVe = visibles?.some(n => n.id === KAPSO_PHONE_NUMBER_ID)
+      console.error('Kapso 404 al crear la bandeja', JSON.stringify({ configurado: KAPSO_PHONE_NUMBER_ID, visibles }))
+      if (visibles && !loVe) {
+        const lista = visibles.length
+          ? visibles.map(n => `${n.numero} (${n.id})`).join(', ')
+          : 'ningún número'
+        return json({
+          error: `La KAPSO_API_KEY es de un proyecto de Kapso que no tiene el número ${KAPSO_PHONE_NUMBER_ID}. ` +
+            `Esa key ve: ${lista}. Crea una API key en el proyecto Peakgym (Integrations → API keys) ` +
+            'y reemplaza KAPSO_API_KEY en Supabase.',
+        }, 502)
+      }
+    }
 
     if (!res.ok || !embedUrl) {
       console.error('Kapso no creó la bandeja:', res.status, raw.slice(0, 500))
