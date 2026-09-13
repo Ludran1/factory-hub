@@ -8,7 +8,9 @@ export function useObjectives(projectId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('objectives')
-        .select(`*, tasks(id, title, status, priority, due_date, time_spent_seconds, timer_started_at, description, task_assignees(profile:profiles(id, name, avatar_url)))`)
+        // has_description y no description: el Gantt solo marca si la tarea tiene
+        // descripción, y el contenido (imágenes en base64) lo pide el modal al abrir.
+        .select(`*, tasks(id, title, status, priority, due_date, time_spent_seconds, timer_started_at, has_description, task_assignees(profile:profiles(id, name, avatar_url)))`)
         .eq('project_id', projectId!)
         .order('start_date', { ascending: true })
       if (error) throw error

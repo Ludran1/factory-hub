@@ -4,7 +4,7 @@ import '@excalidraw/excalidraw/index.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { useBoards, useCreateBoard, useSaveBoard, useDeleteBoard } from '@/hooks/useCollab'
+import { useBoards, useBoardData, useCreateBoard, useSaveBoard, useDeleteBoard } from '@/hooks/useCollab'
 import { useAuth } from '@/hooks/useAuth'
 import { Plus, Save, Loader2, Trash2, Presentation } from 'lucide-react'
 import { format } from 'date-fns'
@@ -44,6 +44,35 @@ async function compressDataURL(dataURL: string): Promise<string | null> {
   return out.length < dataURL.length ? out : null
 }
 
+/**
+ * Huella barata de lo que se persiste, para no guardar cuando no cambió nada.
+ *
+ * Excalidraw llama a onChange también al hacer scroll, zoom o seleccionar. Sin
+ * este filtro cada uno de esos gestos terminaba en un guardado: 2.337 en dos horas
+ * sobre una sola pizarra el 12-sep, casi todo el tráfico del proyecto.
+ *
+ * Excalidraw incrementa `version` en cada elemento que cambia (su getSceneVersion
+ * es esta misma suma) y un borrado también la sube. Los archivos entran con
+ * mimeType y largo porque la compresión reemplaza la imagen con el mismo id: sin
+ * eso la versión liviana nunca se guardaría.
+ */
+interface ElementoEscena { version?: number }
+interface ArchivoEscena { mimeType?: string; dataURL?: string }
+
+function huellaEscena(
+  elements: readonly ElementoEscena[],
+  appState: { viewBackgroundColor?: string } | null | undefined,
+  files: Record<string, ArchivoEscena> | null | undefined,
+): string {
+  let versiones = 0
+  for (const el of elements) versiones += el?.version ?? 0
+  const archivos = Object.entries(files ?? {})
+    .map(([id, f]) => `${id}:${f?.mimeType ?? ''}:${f?.dataURL?.length ?? 0}`)
+    .sort()
+    .join('|')
+  return `${elements.length}:${versiones}:${appState?.viewBackgroundColor ?? ''}:${archivos}`
+}
+
 export default function WhiteBoard({ projectId }: Props) {
   const { profile } = useAuth()
   const { data: boards = [], isLoading } = useBoards(projectId)
@@ -60,8 +89,13 @@ export default function WhiteBoard({ projectId }: Props) {
   const currentDataRef = useRef<{ elements: readonly any[]; appState: any; files: any } | null>(null)
   const excalidrawApiRef = useRef<any>(null)
   const processedFilesRef = useRef<Set<string>>(new Set())
+  /** Huella de lo último guardado (o cargado) de cada pizarra abierta. */
+  const lastSavedRef = useRef<{ boardId: string; fp: string } | null>(null)
 
   const selectedBoard = boards.find(b => b.id === selectedBoardId) ?? boards[0] ?? null
+  // Solo el dibujo de la pizarra abierta: la lista ya no lo trae.
+  const { data: boardData, isLoading: loadingBoard } = useBoardData(selectedBoard?.id ?? null)
+  const savedData = boardData?.excalidraw_data as { elements?: any[]; files?: Record<string, any> } | null | undefined
 
   useEffect(() => {
     if (boards.length > 0 && !selectedBoardId) {
@@ -90,29 +124,49 @@ export default function WhiteBoard({ projectId }: Props) {
   const handleChange = useCallback((elements: readonly any[], appState: any, files: any) => {
     currentDataRef.current = { elements, appState, files }
     maybeCompressFiles(files)
+    if (!selectedBoard || !profile) return
 
+    // La referencia de "sin cambios" es lo que se cargó de la base, con el mismo
+    // fondo que usa initialData. Si Excalidraw normaliza algo al montar, a lo sumo
+    // se hace un guardado; nunca se pierde un cambio real.
+    let base = lastSavedRef.current
+    if (!base || base.boardId !== selectedBoard.id) {
+      base = {
+        boardId: selectedBoard.id,
+        fp: huellaEscena(savedData?.elements ?? [], { viewBackgroundColor: '#ffffff' }, savedData?.files ?? {}),
+      }
+      lastSavedRef.current = base
+    }
+
+    const fp = huellaEscena(elements, appState, files)
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    // Scroll, zoom, selección, o un cambio deshecho antes del guardado: nada que
+    // persistir.
+    if (fp === base.fp) return
+
+    const boardId = selectedBoard.id
+    const profileId = profile.id
     saveTimeoutRef.current = setTimeout(async () => {
-      if (!selectedBoard || !profile) return
       setSaving(true)
       try {
         await saveBoard.mutateAsync({
-          id: selectedBoard.id,
+          id: boardId,
           project_id: projectId,
-          updated_by: profile.id,
+          updated_by: profileId,
           excalidraw_data: {
             elements: elements as object[],
             appState: { viewBackgroundColor: appState.viewBackgroundColor },
             files: files ?? {},
           },
         })
+        lastSavedRef.current = { boardId, fp }
       } catch (err: any) {
         toast.error(`No se pudo guardar: ${err?.message ?? 'error desconocido'}`)
       } finally {
         setSaving(false)
       }
     }, 2000)
-  }, [selectedBoard, profile, projectId, maybeCompressFiles])
+  }, [selectedBoard, profile, projectId, maybeCompressFiles, savedData])
 
   const handleManualSave = async () => {
     if (!selectedBoard || !profile || !currentDataRef.current) return
@@ -129,6 +183,7 @@ export default function WhiteBoard({ projectId }: Props) {
           files: files ?? {},
         },
       })
+      lastSavedRef.current = { boardId: selectedBoard.id, fp: huellaEscena(elements, appState, files) }
       toast.success('Pizarra guardada')
     } catch {
       toast.error('Error al guardar')
@@ -162,7 +217,6 @@ export default function WhiteBoard({ projectId }: Props) {
     }
   }
 
-  const savedData = selectedBoard?.excalidraw_data as { elements?: any[]; files?: Record<string, any> } | null
   const initialData = savedData
     ? {
         elements: savedData.elements ?? [],
@@ -264,20 +318,28 @@ export default function WhiteBoard({ projectId }: Props) {
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
-            <Button size="sm" className="h-7 gap-1 text-xs" onClick={handleManualSave} disabled={saving}>
+            <Button size="sm" className="h-7 gap-1 text-xs" onClick={handleManualSave} disabled={saving || loadingBoard}>
               <Save className="h-3.5 w-3.5" /> Guardar
             </Button>
           </div>
 
           {/* Canvas */}
           <div className="flex-1 min-h-0">
-            <Excalidraw
-              key={selectedBoard.id}
-              excalidrawAPI={api => { excalidrawApiRef.current = api }}
-              initialData={initialData}
-              onChange={handleChange}
-              theme="light"
-            />
+            {/* Excalidraw lee initialData solo al montar: si montara antes de que
+                llegue el dibujo, la pizarra abriría vacía. */}
+            {loadingBoard ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Excalidraw
+                key={selectedBoard.id}
+                excalidrawAPI={api => { excalidrawApiRef.current = api }}
+                initialData={initialData}
+                onChange={handleChange}
+                theme="light"
+              />
+            )}
           </div>
         </div>
       ) : (

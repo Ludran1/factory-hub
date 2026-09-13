@@ -9,7 +9,8 @@ export function useDeveloperDashboard(profileId: string | undefined) {
       const [tasksRes, escalatedRes, objectivesRes] = await Promise.all([
         supabase
           .from('tasks')
-          .select('*, objectives(name, color, project_id, projects(name)), task_assignees!inner(profile_id)')
+          // Sin description: el dashboard lista título y prioridad, no el contenido.
+          .select('id, title, status, priority, due_date, created_at, objectives(name, color, project_id, projects(name)), task_assignees!inner(profile_id)')
           .eq('task_assignees.profile_id', profileId!)
           .neq('status', 'done')
           .order('created_at', { ascending: false }),

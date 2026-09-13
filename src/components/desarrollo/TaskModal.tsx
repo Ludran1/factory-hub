@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DatePicker } from '@/components/ui/date-picker'
-import { useCreateTask, useUpdateTask, useDeleteTask, useDevelopers } from '@/hooks/useTasks'
+import { useCreateTask, useUpdateTask, useDeleteTask, useDevelopers, useTaskDescription } from '@/hooks/useTasks'
 import { toast } from 'sonner'
 import { Trash2, ListChecks, Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -178,7 +178,17 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
     },
   })
 
+  // La descripción no viene en la lista de tareas: trae las imágenes en base64 y
+  // pesa. Se pide sola al abrir una tarea existente.
+  const { data: descripcion } = useTaskDescription(open && task ? task.id : null)
+  // Mientras no llegó, el editor está vacío: guardar ahí borraría la descripción real.
+  const descripcionPendiente = !!task && descripcion === undefined
+  // Qué tarea ya tiene su descripción puesta en el editor. Un refetch en segundo
+  // plano no puede pisar lo que el usuario está escribiendo.
+  const descripcionCargadaRef = useRef<string | null>(null)
+
   useEffect(() => {
+    descripcionCargadaRef.current = null
     if (task) {
       reset({
         title: task.title,
@@ -187,14 +197,28 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
         assignee_ids: task.assignees?.map(a => a.id) ?? [],
         due_date: task.due_date ?? undefined,
       })
-      editor?.commands.setContent((task.description as object) ?? '')
     } else {
       reset({ priority: 'media', objective_id: defaultObjectiveId ?? objectives[0]?.id ?? '', assignee_ids: [] })
-      editor?.commands.setContent('')
     }
+    editor?.commands.setContent('')
   }, [task, open, editor, defaultObjectiveId])
 
+  useEffect(() => {
+    if (!editor || !task || descripcion === undefined) return
+    if (descripcionCargadaRef.current === task.id) return
+    descripcionCargadaRef.current = task.id
+    editor.commands.setContent((descripcion as object) ?? '')
+  }, [editor, task, open, descripcion])
+
+  useEffect(() => {
+    editor?.setEditable(!descripcionPendiente)
+  }, [editor, descripcionPendiente])
+
   const onSubmit = async (data: FormData) => {
+    if (descripcionPendiente) {
+      toast.error('Espera a que cargue la descripción antes de guardar')
+      return
+    }
     try {
       const description = editor && !editor.isEmpty ? editor.getJSON() : null
       if (isEdit && task) {
@@ -389,8 +413,8 @@ export default function TaskModal({ open, onClose, objectives, task, defaultObje
             )}
             <div className="flex gap-2 ml-auto">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" size="sm" disabled={createTask.isPending || updateTask.isPending}>
-                {isEdit ? 'Guardar' : 'Crear tarea'}
+              <Button type="submit" size="sm" disabled={createTask.isPending || updateTask.isPending || descripcionPendiente}>
+                {isEdit ? (descripcionPendiente ? 'Cargando…' : 'Guardar') : 'Crear tarea'}
               </Button>
             </div>
           </div>

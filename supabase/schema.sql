@@ -1263,3 +1263,12 @@ $$;
 -- Solo la llama la Edge Function con service role.
 revoke execute on function public.handle_whatsapp_inbound(text, text, text, text, text, text, text, text)
   from public, anon, authenticated;
+
+-- =============================================
+-- EGRESS: bandera de descripción en tareas
+-- Snapshot de 20260913060000_tasks_has_description.sql.
+-- La lista de tareas pide este booleano; el contenido (imágenes en base64) se
+-- pide solo al abrir una tarea.
+-- =============================================
+alter table tasks add column has_description boolean
+  generated always as (description is not null) stored;

@@ -45,7 +45,8 @@ interface Task {
   due_date: string | null
   time_spent_seconds: number
   timer_started_at: string | null
-  description?: unknown
+  /** La lista no trae el contenido (imágenes en base64): solo si existe. */
+  has_description?: boolean
   objectives: { name: string; color: string } | null
   assignees: Array<{ id: string; name: string; avatar_url: string | null }>
 }
@@ -104,7 +105,7 @@ function KanbanCard({ task, onClick, overlay }: KanbanCardProps) {
               />
             </div>
             <div className="flex items-center gap-1.5">
-              {!!task.description && (
+              {task.has_description && (
                 <AlignLeft className="h-3 w-3 text-muted-foreground" aria-label="Tiene descripción" />
               )}
               {task.due_date && (

@@ -22,7 +22,8 @@ interface Task {
   due_date?: string | null
   time_spent_seconds?: number
   timer_started_at?: string | null
-  description?: unknown
+  /** La lista no trae el contenido (imágenes en base64): el modal lo pide al abrir. */
+  has_description?: boolean
   assignees?: Assignee[]
 }
 interface Objective {
@@ -335,7 +336,6 @@ export default function GanttChart({ objectives, onEditObjective, onTaskClick, o
                             objective_id: obj.id,
                             assignees: task.assignees ?? [],
                             due_date: task.due_date ?? null,
-                            description: task.description ?? null,
                           })}
                           title="Click para editar o borrar la tarea"
                           className="flex border-b last:border-b-0 border-border/40 hover:bg-muted/30 transition-colors group cursor-pointer"

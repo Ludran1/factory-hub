@@ -7,10 +7,14 @@ export function useTasks(projectId: string | null) {
     queryKey: ['tasks', projectId],
     enabled: !!projectId,
     queryFn: async () => {
+      // Columnas explícitas, SIN `description`: el documento de tiptap trae las
+      // imágenes pegadas en base64 (una tarea llega a 1,45 MB) y el tablero solo
+      // necesita saber si hay descripción. El contenido se pide al abrir la tarea.
       const { data, error } = await supabase
         .from('tasks')
         .select(`
-          *,
+          id, objective_id, title, priority, status, assignee_id, due_date,
+          time_spent_seconds, timer_started_at, has_description, created_at, updated_at,
           objectives!inner(id, name, color, project_id),
           task_assignees(profile:profiles(id, name, avatar_url))
         `)
@@ -22,6 +26,23 @@ export function useTasks(projectId: string | null) {
         ...t,
         assignees: (t.task_assignees ?? []).map((a: any) => a.profile).filter(Boolean),
       }))
+    },
+  })
+}
+
+/** La descripción de UNA tarea, al abrirla: es lo único que la necesita entera. */
+export function useTaskDescription(taskId: string | null) {
+  return useQuery({
+    queryKey: ['task-description', taskId],
+    enabled: !!taskId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('description')
+        .eq('id', taskId!)
+        .single()
+      if (error) throw error
+      return (data?.description ?? null) as unknown
     },
   })
 }
@@ -52,6 +73,11 @@ async function setTaskAssignees(taskId: string, assigneeIds: string[]) {
   }
 }
 
+// En todas las mutaciones: .select('id') y no .select(). Sin columnas, PostgREST
+// devuelve la fila completa —descripción con imágenes incluida— en cada cambio de
+// estado o de timer, y nadie usa esa respuesta. `.single()` sigue fallando si RLS
+// bloqueó el update, que es lo que importa detectar.
+
 export function useCreateTask() {
   const qc = useQueryClient()
   return useMutation({
@@ -63,7 +89,7 @@ export function useCreateTask() {
       due_date?: string | null
       description?: unknown
     }) => {
-      const { data, error } = await supabase.from('tasks').insert(task).select().single()
+      const { data, error } = await supabase.from('tasks').insert(task).select('id').single()
       if (error) throw error
       if (assignee_ids && assignee_ids.length > 0) {
         await setTaskAssignees(data.id, assignee_ids)
@@ -101,13 +127,13 @@ export function useUpdateTaskStatus() {
               timer_started_at: null,
             })
             .eq('id', id)
-            .select()
+            .select('id')
             .single()
           if (error) throw error
           return data
         }
       }
-      const { data, error } = await supabase.from('tasks').update({ status }).eq('id', id).select().single()
+      const { data, error } = await supabase.from('tasks').update({ status }).eq('id', id).select('id').single()
       if (error) throw error
       return data
     },
@@ -122,16 +148,20 @@ export function useUpdateTask() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, assignee_ids, ...updates }: { id: string; title?: string; priority?: string; status?: string; assignee_ids?: string[]; due_date?: string | null; description?: unknown }) => {
-      const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single()
+      const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select('id').single()
       if (error) throw error
       if (assignee_ids) {
         await setTaskAssignees(id, assignee_ids)
       }
       return data
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       qc.invalidateQueries({ queryKey: ['objectives'] })
+      // Lo que se acaba de guardar ya está en memoria: reabrir la tarea no lo descarga.
+      if ('description' in vars) {
+        qc.setQueryData(['task-description', vars.id], vars.description ?? null)
+      }
     },
   })
 }
@@ -145,7 +175,7 @@ export function useToggleTimer() {
           .from('tasks')
           .update({ timer_started_at: new Date().toISOString() })
           .eq('id', id)
-          .select()
+          .select('id')
           .single()
         if (error) throw error
         return data
@@ -161,7 +191,7 @@ export function useToggleTimer() {
         .from('tasks')
         .update({ time_spent_seconds: row.time_spent_seconds + elapsed, timer_started_at: null })
         .eq('id', id)
-        .select()
+        .select('id')
         .single()
       if (error) throw error
       return data
@@ -179,10 +209,12 @@ export function useDeleteTask() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('tasks').delete().eq('id', id)
       if (error) throw error
+      return id
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       qc.invalidateQueries({ queryKey: ['objectives'] })
+      qc.removeQueries({ queryKey: ['task-description', id] })
     },
   })
 }

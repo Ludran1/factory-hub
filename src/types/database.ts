@@ -110,10 +110,12 @@ export interface Database {
           time_spent_seconds: number
           timer_started_at: string | null
           description: unknown | null
+          /** Columna generada (description is not null). Las listas piden esto, no el contenido. */
+          has_description: boolean
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['tasks']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Insert: Omit<Database['public']['Tables']['tasks']['Row'], 'id' | 'created_at' | 'updated_at' | 'has_description'>
         Update: Partial<Database['public']['Tables']['tasks']['Insert']>
         Relationships: []
       }
