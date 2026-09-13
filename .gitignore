@@ -27,3 +27,6 @@ dist-ssr
 # que es lo reproducible; .claude/skills son symlinks a rutas absolutas de la
 # máquina y se regeneran en cada install.
 .claude/
+
+# Caché local del CLI de Supabase (versión, project ref vinculado). No es código.
+supabase/.temp/
