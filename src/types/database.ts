@@ -172,6 +172,9 @@ export interface Database {
           product: string
           /** Columna generada desde contact_phone. La app nunca la escribe. */
           phone_e164: string | null
+          /** business_scoped_user_id de WhatsApp. Puede existir sin teléfono. */
+          whatsapp_bsuid: string | null
+          whatsapp_username: string | null
           value: number
           currency: Currency
           value_pen: number
@@ -186,8 +189,8 @@ export interface Database {
         // currency y value_pen tienen default en la DB y normalmente los escribe
         // respond_quote al aceptar una cotización, no el formulario de lead.
         Insert:
-          & Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at' | 'currency' | 'value_pen' | 'phone_e164'>
-          & Partial<Pick<Database['public']['Tables']['leads']['Row'], 'currency' | 'value_pen'>>
+          & Omit<Database['public']['Tables']['leads']['Row'], 'id' | 'created_at' | 'updated_at' | 'currency' | 'value_pen' | 'phone_e164' | 'whatsapp_bsuid' | 'whatsapp_username'>
+          & Partial<Pick<Database['public']['Tables']['leads']['Row'], 'currency' | 'value_pen' | 'whatsapp_bsuid' | 'whatsapp_username'>>
         Update: Partial<Database['public']['Tables']['leads']['Insert']>
         Relationships: []
       }
@@ -195,12 +198,14 @@ export interface Database {
         Row: {
           id: string
           lead_id: string
-          author_id: string
+          /** null = lo registró el cliente o una automatización (webhook de WhatsApp). */
+          author_id: string | null
+          external_id: string | null
           type: ActivityType
           body: string
           created_at: string
         }
-        Insert: Omit<Database['public']['Tables']['lead_activities']['Row'], 'id' | 'created_at'>
+        Insert: Omit<Database['public']['Tables']['lead_activities']['Row'], 'id' | 'created_at' | 'external_id'> & Partial<Pick<Database['public']['Tables']['lead_activities']['Row'], 'external_id'>>
         Update: Partial<Database['public']['Tables']['lead_activities']['Insert']>
         Relationships: []
       }

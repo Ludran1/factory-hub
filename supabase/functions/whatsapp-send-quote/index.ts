@@ -2,8 +2,7 @@
 //
 // Tiene que ser plantilla y no texto libre: mandar una cotización casi siempre
 // cae fuera de la ventana de 24h desde el último mensaje del cliente, y ahí Meta
-// solo entrega plantillas. Ver docs/prd-cotizaciones.md y la skill
-// integrate-whatsapp.
+// solo entrega plantillas.
 //
 // Autorización: se lee la cotización con el JWT de quien llama, así RLS decide.
 // Si un closer no puede ver esa cotización, tampoco puede mandarla. El service
@@ -42,6 +41,50 @@ function money(total: number, currency: string) {
   })}`
 }
 
+/**
+ * Meta rechaza valores de variable con saltos de línea, tabs o varios espacios
+ * seguidos. Los nombres de empresa se tipean a mano ("URBAN  FORCE"), así que se
+ * limpian antes de mandar en vez de descubrirlo con un error.
+ */
+function param(v: string): string {
+  return v.replace(/[\r\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim()
+}
+
+/** Código de error de Meta, venga como JSON del proxy de Kapso o como texto. */
+function codigoMeta(raw: string): number | null {
+  try {
+    const j = JSON.parse(raw)
+    const c = Number(j?.error?.code ?? j?.code)
+    if (Number.isFinite(c) && c > 0) return c
+  } catch {
+    // no era JSON
+  }
+  const m = raw.match(/\b(13\d{4})\b/)
+  return m ? Number(m[1]) : null
+}
+
+/** Traducidos a qué hacer, según la tabla oficial de códigos de error de Meta. */
+function explicarError(code: number | null, raw: string, status: number): string {
+  switch (code) {
+    case 132001:
+      return `La plantilla "${TEMPLATE}" no existe en el idioma "${TPL_LANG}" o todavía no está aprobada por Meta.`
+    case 132000:
+      return `La cantidad de variables no coincide con la plantilla "${TEMPLATE}" registrada en Meta.`
+    case 132012:
+      return `Los valores de las variables no tienen el formato que espera la plantilla "${TEMPLATE}".`
+    case 132015:
+      return `La plantilla "${TEMPLATE}" está pausada por baja calidad: hay que editarla en Meta.`
+    case 132016:
+      return `La plantilla "${TEMPLATE}" quedó deshabilitada por baja calidad: hay que crear una nueva.`
+    case 131026:
+      return 'Ese número no puede recibir el mensaje: no tiene WhatsApp o su app está desactualizada.'
+    case 131042:
+      return 'Hay un problema con el pago de los mensajes a Meta: revisa el saldo de créditos en Kapso.'
+    default:
+      return `Kapso ${status}: ${raw.slice(0, 300)}`
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
@@ -68,14 +111,14 @@ Deno.serve(async (req) => {
 
     const { data: quote, error: readError } = await asCaller
       .from('quotes')
-      .select('id, number, status, total, currency, client_contact, client_company, client_phone_e164, public_token, valid_until, lead_id')
+      .select('id, number, status, total, currency, client_contact, client_company, client_phone_e164, public_token, lead_id')
       .eq('id', quote_id)
       .single()
 
     if (readError || !quote) return json({ error: 'Cotización no encontrada o sin acceso' }, 404)
 
     if (quote.status === 'borrador') {
-      return json({ error: 'Enviá la cotización primero: en borrador todavía se puede editar' }, 400)
+      return json({ error: 'Envía la cotización primero: en borrador todavía se puede editar' }, 400)
     }
     if (!quote.client_phone_e164) {
       return json({ error: 'La cotización no tiene un teléfono válido para WhatsApp' }, 400)
@@ -98,9 +141,9 @@ Deno.serve(async (req) => {
             components: [{
               type: 'body',
               parameters: [
-                { type: 'text', parameter_name: 'contacto', text: quote.client_contact || quote.client_company },
-                { type: 'text', parameter_name: 'numero',   text: quote.number },
-                { type: 'text', parameter_name: 'total',    text: money(quote.total, quote.currency) },
+                { type: 'text', parameter_name: 'contacto', text: param(quote.client_contact || quote.client_company) },
+                { type: 'text', parameter_name: 'numero',   text: param(quote.number) },
+                { type: 'text', parameter_name: 'total',    text: param(money(quote.total, quote.currency)) },
                 { type: 'text', parameter_name: 'link',     text: link },
               ],
             }],
@@ -110,18 +153,9 @@ Deno.serve(async (req) => {
     )
 
     if (!res.ok) {
-      const err = await res.text().catch(() => '')
-      console.error('Kapso rechazó el envío:', err)
-      // Los errores que más van a pasar, traducidos. El resto va crudo.
-      const noExiste = /template.*(not exist|not found)|132001/i.test(err)
-      const noAprobada = /not approved|132000|132005/i.test(err)
-      return json({
-        error: noExiste
-          ? `La plantilla "${TEMPLATE}" no existe en tu WABA. Registrala en Meta primero.`
-          : noAprobada
-            ? `La plantilla "${TEMPLATE}" todavía no está aprobada por Meta.`
-            : `Kapso ${res.status}: ${err.slice(0, 300)}`,
-      }, 502)
+      const raw = await res.text().catch(() => '')
+      console.error('Kapso rechazó el envío:', raw)
+      return json({ error: explicarError(codigoMeta(raw), raw, res.status) }, 502)
     }
 
     // El registro va con service role: quote_events no tiene policy de insert
@@ -135,7 +169,7 @@ Deno.serve(async (req) => {
       meta: { channel: 'whatsapp', to: quote.client_phone_e164, template: TEMPLATE },
     })
 
-    // Que también aparezca en el timeline del lead: es donde el closer mira la
+    // Que también aparezca en el historial del lead: es donde el closer mira la
     // relación con el cliente, no en el detalle de la cotización.
     if (quote.lead_id) {
       await admin.from('lead_activities').insert({

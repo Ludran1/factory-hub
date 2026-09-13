@@ -1,35 +1,63 @@
 // Webhook de WhatsApp entrante (Kapso) → lead en Factory Hub.
 //
-// Lo único que hace acá es verificar la firma y traducir el payload. El
-// find-or-create vive en handle_whatsapp_inbound (migración 20260911190000)
-// porque ahí es atómico y usa la misma normalize_phone_pe que la columna
-// generada: un solo dialecto de teléfono en todo el sistema.
+// Acá solo se verifica la firma y se traduce el payload. El find-or-create vive
+// en handle_whatsapp_inbound (DB): es atómico, usa la misma normalize_phone_pe
+// que la columna generada y deduplica por wamid.
 //
-// verify_jwt: FALSE a propósito — lo llama Kapso, no un usuario logueado.
-// La autorización es la firma HMAC del body crudo.
+// Contrastado contra la doc de Kapso y contra el agente de Render de PeakGym,
+// que recibe webhooks reales en producción:
+//   · el tipo de evento viene en el header X-Webhook-Event, no en el body
+//   · con buffering el body es { batch: true, data: [...] }, y un lote que falla
+//     se reentrega mensaje por mensaje: hay que aceptar las dos formas
+//   · un audio trae la transcripción en message.kapso.transcript.text;
+//     message.kapso.content es la descripción del adjunto con la URL del archivo
+//   · con nombres de usuario de WhatsApp el teléfono puede venir null u omitido y
+//     solo llega el business_scoped_user_id: no se descarta, se cruza por BSUID
+//
+// verify_jwt: FALSE a propósito — lo llama Kapso, no un usuario logueado. La
+// autorización es la firma HMAC del body crudo.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const WEBHOOK_SECRET = Deno.env.get('KAPSO_WEBHOOK_SECRET')
-/** Qué se está vendiendo por este número. Va al campo `product` del lead. */
+/** Qué se vende por este número. Va al campo `product` del lead. */
 const PRODUCT = Deno.env.get('WHATSAPP_LEAD_PRODUCT') ?? 'PeakGym'
 
-interface KapsoWebhook {
-  event?: string
+/** No son una persona escribiendo: reacciones a mensajes anteriores y lo que
+ *  Meta manda por encuestas, llamadas perdidas o avisos de sistema. */
+const IGNORADOS = new Set(['reaction', 'unsupported', 'system'])
+
+interface KapsoItem {
   phone_number_id?: string
-  is_new_conversation?: boolean
   message?: {
     id?: string
     type?: string
+    from?: string
+    from_user_id?: string
+    business_scoped_user_id?: string
+    username?: string
     text?: { body?: string }
-    kapso?: { direction?: string; content?: string; transcript?: string }
+    kapso?: {
+      direction?: string
+      transcript?: { text?: string }
+      business_scoped_user_id?: string
+      username?: string
+    }
   }
   conversation?: {
     id?: string
-    phone_number?: string
+    phone_number?: string | null
+    business_scoped_user_id?: string | null
+    username?: string | null
     kapso?: { contact_name?: string }
   }
+}
+
+interface KapsoEnvelope extends KapsoItem {
+  type?: string
+  batch?: boolean
+  data?: KapsoItem[]
 }
 
 function hex(buf: ArrayBuffer): string {
@@ -44,23 +72,14 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-/**
- * La doc actual de Kapso especifica `X-Webhook-Signature` con hex plano, pero
- * el webhook de PeakGym compara contra `sha256=<hex>` en `x-kapso-signature` y
- * está en producción. Hasta confirmar cuál manda de verdad, se aceptan ambos y
- * se loguea el que matcheó — así el log dice cuál formato está vivo y después
- * se puede cerrar al que corresponda.
- */
+/** HMAC-SHA256 del body crudo, en hex, en X-Webhook-Signature. Es el único
+ *  formato que documenta Kapso (overview, security, legacy y guías de migración). */
 async function firmaValida(req: Request, rawBody: string): Promise<boolean> {
   if (!WEBHOOK_SECRET) {
     console.error('KAPSO_WEBHOOK_SECRET sin configurar: se rechaza todo.')
     return false
   }
-
-  const recibida =
-    req.headers.get('x-webhook-signature') ??
-    req.headers.get('x-kapso-signature') ??
-    ''
+  const recibida = (req.headers.get('x-webhook-signature') ?? '').trim().toLowerCase()
   if (!recibida) return false
 
   const key = await crypto.subtle.importKey(
@@ -71,26 +90,16 @@ async function firmaValida(req: Request, rawBody: string): Promise<boolean> {
     ['sign'],
   )
   const esperada = hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody)))
-
-  if (safeEqual(recibida, esperada)) {
-    console.log('firma ok (hex plano)')
-    return true
-  }
-  if (safeEqual(recibida, `sha256=${esperada}`)) {
-    console.log('firma ok (prefijo sha256=)')
-    return true
-  }
-  return false
+  return safeEqual(recibida, esperada)
 }
 
-/** El texto según el tipo de mensaje. Audio trae transcript, no body. */
-function textoDe(msg: KapsoWebhook['message']): string | null {
-  return (
-    msg?.text?.body ??
-    msg?.kapso?.content ??
-    msg?.kapso?.transcript ??
-    null
-  )
+/** Mismo criterio que el agente de producción: el texto, la transcripción si es
+ *  audio, o un marcador del tipo. Nunca kapso.content, que para un adjunto trae
+ *  la descripción del archivo con su URL. */
+function textoDe(msg: NonNullable<KapsoItem['message']>): string {
+  if (msg.type === 'text') return msg.text?.body?.trim() || '[texto vacío]'
+  const transcripcion = msg.kapso?.transcript?.text?.trim()
+  return transcripcion || `[${msg.type ?? 'mensaje'}]`
 }
 
 Deno.serve(async (req) => {
@@ -104,46 +113,70 @@ Deno.serve(async (req) => {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const body = JSON.parse(rawBody) as KapsoWebhook
+    const event = req.headers.get('x-webhook-event')
+    const body = JSON.parse(rawBody) as KapsoEnvelope
+    const esBatch =
+      (req.headers.get('x-webhook-batch') === 'true' || body.batch === true) &&
+      Array.isArray(body.data)
 
-    // Se suscribe solo a message.received, pero si la config del webhook manda
-    // de más, acá se descarta en vez de crear leads fantasma con los ecos de
-    // nuestros propios mensajes salientes.
-    const esEntrante =
-      (body.event === undefined || body.event === 'whatsapp.message.received') &&
-      body.message?.kapso?.direction !== 'outbound'
-
-    if (!esEntrante) {
-      return Response.json({ ok: true, ignored: body.event ?? 'no-event' })
+    // El webhook se suscribe solo a message.received, pero si en el dashboard se
+    // agregan más eventos, se descartan acá en vez de crear leads.
+    if (!esBatch && event !== 'whatsapp.message.received') {
+      return Response.json({ ok: true, ignored: event ?? 'sin-evento' })
     }
 
-    const phone = body.conversation?.phone_number
-    const wamid = body.message?.id
-    if (!phone || !wamid) {
-      console.warn('Payload sin phone_number o message.id', rawBody.slice(0, 300))
-      // 200 igual: reintentar no va a arreglar un payload incompleto.
-      return Response.json({ ok: false, error: 'Payload incompleto' })
-    }
-
+    const items = esBatch ? body.data! : [body]
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
+    const resultados: unknown[] = []
+    let fallo = false
 
-    const { data, error } = await admin.rpc('handle_whatsapp_inbound', {
-      p_phone: phone,
-      p_contact_name: body.conversation?.kapso?.contact_name ?? null,
-      p_text: textoDe(body.message),
-      p_wamid: wamid,
-      p_conversation_id: body.conversation?.id ?? null,
-      p_product: PRODUCT,
-    })
+    for (const it of items) {
+      const msg = it?.message
+      if (!msg?.id) continue
+      // Los ecos de nuestros propios mensajes no son un lead.
+      if (msg.kapso?.direction === 'outbound') continue
+      if (IGNORADOS.has(msg.type ?? '')) continue
 
-    if (error) {
-      console.error('handle_whatsapp_inbound falló:', error.message)
-      // 500 → Kapso reintenta. El wamid hace que el reintento sea seguro.
-      return new Response('Error', { status: 500 })
+      const phone = it.conversation?.phone_number ?? msg.from ?? null
+      const bsuid =
+        it.conversation?.business_scoped_user_id ??
+        msg.business_scoped_user_id ??
+        msg.kapso?.business_scoped_user_id ??
+        msg.from_user_id ??
+        null
+      const username = it.conversation?.username ?? msg.username ?? msg.kapso?.username ?? null
+
+      if (!phone && !bsuid) {
+        console.warn('Mensaje sin teléfono ni BSUID:', msg.id)
+        resultados.push({ ok: false, wamid: msg.id, error: 'sin identidad' })
+        continue
+      }
+
+      const { data, error } = await admin.rpc('handle_whatsapp_inbound', {
+        p_phone: phone,
+        p_contact_name: it.conversation?.kapso?.contact_name ?? null,
+        p_text: textoDe(msg),
+        p_wamid: msg.id,
+        p_conversation_id: it.conversation?.id ?? null,
+        p_product: PRODUCT,
+        p_bsuid: bsuid,
+        p_username: username,
+      })
+
+      if (error) {
+        console.error('handle_whatsapp_inbound falló:', msg.id, error.message)
+        fallo = true
+        continue
+      }
+      resultados.push(data)
     }
 
-    console.log('inbound procesado:', JSON.stringify(data))
-    return Response.json(data)
+    // 500 → Kapso reintenta la entrega completa. Es seguro: los mensajes que ya
+    // entraron se deduplican por wamid en la DB.
+    if (fallo) return new Response('Error', { status: 500 })
+
+    console.log('inbound procesado:', JSON.stringify(resultados))
+    return Response.json({ ok: true, procesados: resultados.length, resultados })
   } catch (e) {
     console.error('whatsapp-webhook:', e instanceof Error ? e.message : String(e))
     return new Response('Error', { status: 500 })

@@ -295,7 +295,10 @@ export default function LeadPanel({ leadId, onClose, onEdit }: Props) {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-baseline gap-2">
-                            <span className="text-xs font-medium">{act.author?.name}</span>
+                            {/* Sin autor = lo escribió el webhook de WhatsApp (el cliente o un envío automático). */}
+                            <span className="text-xs font-medium">
+                              {act.author?.name ?? (act.type === 'whatsapp' ? 'WhatsApp' : 'Sistema')}
+                            </span>
                             <Badge variant="outline" className="text-[10px] py-0 h-4">{activityLabels[act.type as ActivityType]}</Badge>
                             <span className="text-[10px] text-muted-foreground ml-auto">
                               {format(new Date(act.created_at), 'dd MMM HH:mm', { locale: es })}
