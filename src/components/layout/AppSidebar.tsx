@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Code2, Users, Megaphone, LifeBuoy, UserCog,
+  LayoutDashboard, Code2, Users, Megaphone, MessageCircle, LifeBuoy, UserCog,
   ChevronLeft, ChevronRight, LogOut, Moon, Sun, Factory
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,6 +19,9 @@ const navItems = [
   { to: '/desarrollo', icon: Code2, label: 'Desarrollo', module: 'desarrollo' },
   { to: '/colaboracion', icon: Users, label: 'Colaboracion', module: 'colaboracion' },
   { to: '/marketing', icon: Megaphone, label: 'Marketing / CRM', module: 'marketing' },
+  // Mismo módulo que Marketing: el chat muestra a los mismos clientes, nadie tiene
+  // que reconfigurar permisos, y es lo que valida la función kapso-inbox-embed.
+  { to: '/chat', icon: MessageCircle, label: 'Chat', module: 'marketing' },
   { to: '/soporte', icon: LifeBuoy, label: 'Soporte', module: 'soporte' },
   { to: '/usuarios', icon: UserCog, label: 'Usuarios', module: 'usuarios' },
 ] as const

@@ -19,6 +19,7 @@ const ColaboracionPage = lazy(() => import('@/pages/ColaboracionPage'))
 const UsersPage = lazy(() => import('@/pages/UsersPage'))
 const QuotePage = lazy(() => import('@/pages/QuotePage'))
 const PublicQuotePage = lazy(() => import('@/pages/PublicQuotePage'))
+const ChatPage = lazy(() => import('@/pages/ChatPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +82,7 @@ function AppRoutes() {
         <Route path="colaboracion" element={<LazyRoute><ColaboracionPage /></LazyRoute>} />
         <Route path="marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
         <Route path="marketing/cotizacion/:id" element={<LazyRoute><QuotePage /></LazyRoute>} />
+        <Route path="chat" element={<LazyRoute><ChatPage /></LazyRoute>} />
         <Route path="soporte" element={<LazyRoute><SoportePage /></LazyRoute>} />
         <Route path="usuarios" element={<LazyRoute><UsersPage /></LazyRoute>} />
       </Route>

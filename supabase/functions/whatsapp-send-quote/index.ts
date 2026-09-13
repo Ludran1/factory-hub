@@ -13,14 +13,17 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 
-const KAPSO_API_KEY = Deno.env.get('KAPSO_API_KEY')
-const KAPSO_PHONE_NUMBER_ID = Deno.env.get('KAPSO_PHONE_NUMBER_ID')
-const TEMPLATE = Deno.env.get('KAPSO_QUOTE_TEMPLATE') ?? 'cotizacion_enviada'
-const TPL_LANG = Deno.env.get('KAPSO_TPL_LANG') ?? 'es'
-const META_VERSION = Deno.env.get('META_GRAPH_VERSION') ?? 'v24.0'
+// trim() en todas: un espacio pegado al cargar el secret en el dashboard rompe la
+// URL de Kapso con un 404 que no dice por qué. Le pasó a kapso-inbox-embed con
+// KAPSO_PHONE_NUMBER_ID el 13-sep.
+const KAPSO_API_KEY = Deno.env.get('KAPSO_API_KEY')?.trim()
+const KAPSO_PHONE_NUMBER_ID = Deno.env.get('KAPSO_PHONE_NUMBER_ID')?.trim()
+const TEMPLATE = Deno.env.get('KAPSO_QUOTE_TEMPLATE')?.trim() || 'cotizacion_enviada'
+const TPL_LANG = Deno.env.get('KAPSO_TPL_LANG')?.trim() || 'es'
+const META_VERSION = Deno.env.get('META_GRAPH_VERSION')?.trim() || 'v24.0'
 /** Base pública de la app. No se toma del request: el link va dentro de un
  *  mensaje de WhatsApp y no puede depender de lo que mande el navegador. */
-const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL')
+const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL')?.trim()
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

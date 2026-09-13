@@ -1,16 +1,21 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, MessageCircleWarning } from 'lucide-react'
 import { useInboxEmbed } from '@/hooks/useInboxEmbed'
+import { cn } from '@/lib/utils'
+
+interface Props {
+  /** Alto del iframe. La página de Chat le da casi toda la pantalla. */
+  className?: string
+}
 
 /**
- * La bandeja de WhatsApp de Kapso dentro de Marketing/CRM.
+ * La bandeja de WhatsApp de Kapso.
  *
  * No es un chat propio: es el inbox de Kapso en un iframe, en español y en tiempo
  * real. Responder, ver adjuntos y el historial lo resuelve Kapso; acá solo se
- * muestra. Radix desmonta las pestañas inactivas, así que el iframe (y el pedido
- * del URL) solo existe mientras la pestaña Chat está abierta.
+ * muestra. El URL (con su token) se pide recién cuando este componente se monta.
  */
-export default function WhatsAppInbox() {
+export default function WhatsAppInbox({ className }: Props) {
   const { data: url, isLoading, error } = useInboxEmbed(true)
 
   if (isLoading) {
@@ -42,7 +47,7 @@ export default function WhatsAppInbox() {
       <iframe
         src={url}
         title="Bandeja de WhatsApp"
-        className="w-full h-[calc(100vh-22rem)] min-h-[560px] border-0 block"
+        className={cn('w-full border-0 block', className ?? 'h-[calc(100vh-22rem)] min-h-[560px]')}
         allow="clipboard-read; clipboard-write"
       />
     </Card>
