@@ -80,14 +80,14 @@ export default function LeadKanban({ leads, onLeadClick }: Props) {
             onDrop={() => handleDrop(stage.key)}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold">{stage.label}</h3>
-                <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
+                <h3 className="text-lg font-bold">{stage.label}</h3>
+                <span className="text-sm font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
                   {stageLeads.length}
                 </span>
               </div>
-              <div className="flex items-center gap-0.5 text-xs text-muted-foreground font-medium tabular-nums">
+              <div className="flex items-center gap-0.5 text-sm text-muted-foreground font-semibold tabular-nums">
                 {formatMoneyShort(total)}
               </div>
             </div>
