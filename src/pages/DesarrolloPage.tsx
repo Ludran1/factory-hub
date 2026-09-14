@@ -14,6 +14,7 @@ import TaskModal from '@/components/desarrollo/TaskModal'
 import ObjectiveModal from '@/components/desarrollo/ObjectiveModal'
 import ProjectModal from '@/components/desarrollo/ProjectModal'
 import ProjectMembersModal from '@/components/desarrollo/ProjectMembersModal'
+import PageHeader from '@/components/layout/PageHeader'
 
 export default function DesarrolloPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
@@ -75,19 +76,16 @@ export default function DesarrolloPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Desarrollo</h1>
-          <p className="text-sm text-muted-foreground">Gestion de sprints y cronogramas</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title="Desarrollo"
+        subtitle="Gestion de sprints y cronogramas"
+        actions={
           <Button variant="outline" size="sm" onClick={() => setProjectModalOpen(true)}>
             <FolderOpen className="h-4 w-4" />
             Nuevo proyecto
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Project selector */}
       {loadingProjects ? (

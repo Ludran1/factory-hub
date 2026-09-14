@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, UserPlus, KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import UserModal, { ALL_MODULES } from '@/components/admin/UserModal'
+import PageHeader from '@/components/layout/PageHeader'
 import type { Database, UserRole } from '@/types/database'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -84,17 +85,15 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Usuarios</h1>
-          <p className="text-sm text-muted-foreground">
-            Gestiona los miembros del equipo, roles y módulos
-          </p>
-        </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <UserPlus className="h-4 w-4" /> Nuevo usuario
-        </Button>
-      </div>
+      <PageHeader
+        title="Usuarios"
+        subtitle="Gestiona los miembros del equipo, roles y módulos"
+        actions={
+          <Button size="sm" onClick={() => setShowCreate(true)} className="gap-2">
+            <UserPlus className="h-4 w-4" /> Nuevo usuario
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">

@@ -1,4 +1,5 @@
 import WhatsAppInbox from '@/components/marketing/WhatsAppInbox'
+import PageHeader from '@/components/layout/PageHeader'
 
 /**
  * Chat de WhatsApp como sección propia del sidebar y no como pestaña de Marketing.
@@ -9,12 +10,10 @@ import WhatsAppInbox from '@/components/marketing/WhatsAppInbox'
  */
 export default function ChatPage() {
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Chat</h1>
-        <p className="text-sm text-muted-foreground">Conversaciones de WhatsApp del número de ventas</p>
-      </div>
-      <WhatsAppInbox className="h-[calc(100vh-11rem)] min-h-[560px]" />
+    <div className="animate-fade-in">
+      <PageHeader title="Chat" subtitle="Conversaciones de WhatsApp del número de ventas" />
+      {/* 7rem = barra superior (3.5rem) + padding del layout arriba y abajo (3rem) + margen */}
+      <WhatsAppInbox className="h-[calc(100vh-7rem)] min-h-[560px]" />
     </div>
   )
 }

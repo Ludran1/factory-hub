@@ -9,6 +9,7 @@ import { usePresence, type PresenceUser } from '@/hooks/usePresence'
 import { clearCorruptSession } from '@/lib/supabase'
 import WhiteBoard from '@/components/colaboracion/WhiteBoard'
 import NotesEditor from '@/components/colaboracion/NotesEditor'
+import PageHeader from '@/components/layout/PageHeader'
 
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -57,18 +58,14 @@ export default function ColaboracionPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Colaboracion</h1>
-          <p className="text-sm text-muted-foreground">Pizarra compartida y notas del equipo</p>
-        </div>
-
-        {/* Presence + Project selector */}
-        {isLoading ? (
+      {/* Presencia y selector de proyecto van en la barra superior, junto al título. */}
+      <PageHeader
+        title="Colaboracion"
+        subtitle="Pizarra compartida y notas del equipo"
+        actions={isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : projects.length > 0 ? (
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
             <PresenceBar users={presentUsers} />
             <Select value={activeProject ?? ''} onValueChange={setSelectedProject}>
               <SelectTrigger className="w-52">
@@ -90,7 +87,7 @@ export default function ColaboracionPage() {
             )}
           </div>
         ) : null}
-      </div>
+      />
 
       {/* Error */}
       {isError && (

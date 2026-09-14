@@ -15,6 +15,7 @@ import LeadPanel from '@/components/marketing/LeadPanel'
 import LeadModal from '@/components/marketing/LeadModal'
 import QuoteList from '@/components/marketing/QuoteList'
 import EmitterSettingsDialog from '@/components/marketing/EmitterSettingsDialog'
+import PageHeader from '@/components/layout/PageHeader'
 import { formatMoney, formatMoneyShort } from '@/lib/quotes'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -82,18 +83,15 @@ export default function MarketingPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Marketing / CRM</h1>
-          <p className="text-sm text-muted-foreground">Pipeline de leads y oportunidades de venta</p>
-        </div>
-        {(role === 'admin' || role === 'closer') && (
+      <PageHeader
+        title="Marketing / CRM"
+        subtitle="Pipeline de leads y oportunidades de venta"
+        actions={(role === 'admin' || role === 'closer') && (
           <Button size="sm" onClick={() => { setEditingLead(null); setModalOpen(true) }}>
             <Plus className="h-4 w-4" /> Nuevo lead
           </Button>
         )}
-      </div>
+      />
 
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

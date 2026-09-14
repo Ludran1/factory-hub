@@ -4,6 +4,7 @@ import SupportDashboard from '@/components/dashboard/SupportDashboard'
 import CloserDashboard from '@/components/dashboard/CloserDashboard'
 import MarketingDashboard from '@/components/dashboard/MarketingDashboard'
 import AdminDashboard from '@/components/dashboard/AdminDashboard'
+import PageHeader from '@/components/layout/PageHeader'
 
 const greetings: Record<string, string> = {
   developer: 'Panel de Desarrollo',
@@ -27,15 +28,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {greetings[r] ?? 'Dashboard'}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {profile?.name ? `Hola, ${profile.name.split(' ')[0]}. ` : ''}
-          {subtitles[r] ?? ''}
-        </p>
-      </div>
+      <PageHeader
+        title={greetings[r] ?? 'Dashboard'}
+        subtitle={`${profile?.name ? `Hola, ${profile.name.split(' ')[0]}. ` : ''}${subtitles[r] ?? ''}`}
+      />
 
       {r === 'developer' && <DeveloperDashboard />}
       {r === 'support' && <SupportDashboard />}

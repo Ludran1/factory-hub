@@ -10,6 +10,7 @@ import { Plus, Search, ChevronLeft, ChevronRight, AlertCircle, Clock, CheckCircl
 import { useTickets } from '@/hooks/useTickets'
 import TicketModal from '@/components/soporte/TicketModal'
 import TicketPanel from '@/components/soporte/TicketPanel'
+import PageHeader from '@/components/layout/PageHeader'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -59,17 +60,16 @@ export default function SoportePage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Soporte</h1>
-          <p className="text-sm text-muted-foreground">Bandeja de tickets e incidencias</p>
-        </div>
-        <Button size="sm" onClick={() => setTicketModalOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Nuevo ticket
-        </Button>
-      </div>
+      <PageHeader
+        title="Soporte"
+        subtitle="Bandeja de tickets e incidencias"
+        actions={
+          <Button size="sm" onClick={() => setTicketModalOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Nuevo ticket
+          </Button>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
