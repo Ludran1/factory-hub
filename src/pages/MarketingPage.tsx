@@ -124,21 +124,23 @@ export default function MarketingPage() {
             <TabsTrigger value="tabla">Tabla</TabsTrigger>
             <TabsTrigger value="cotizaciones">Cotizaciones</TabsTrigger>
           </TabsList>
+          {/* En el celular la búsqueda toma el ancho que dejan el filtro y el botón;
+              con anchos fijos la fila medía más que la pantalla. */}
           <div className="flex gap-2">
-            <div className="relative">
+            <div className="relative min-w-0 flex-1 sm:flex-none">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(0) }}
-                className="pl-9 h-9 w-48"
+                className="pl-9 h-9 w-full sm:w-48"
               />
             </div>
             {/* La etapa es del lead y el estado es de la cotización: cada
                 pestaña filtra por lo suyo. */}
             {tab === 'cotizaciones' ? (
               <Select value={quoteStatus} onValueChange={setQuoteStatus}>
-                <SelectTrigger className="h-9 w-36">
+                <SelectTrigger className="h-9 w-32 shrink-0 sm:w-36">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
@@ -151,7 +153,7 @@ export default function MarketingPage() {
               </Select>
             ) : (
               <Select value={stageFilter} onValueChange={v => { setStageFilter(v); setPage(0) }}>
-                <SelectTrigger className="h-9 w-36">
+                <SelectTrigger className="h-9 w-32 shrink-0 sm:w-36">
                   <SelectValue placeholder="Etapa" />
                 </SelectTrigger>
                 <SelectContent>

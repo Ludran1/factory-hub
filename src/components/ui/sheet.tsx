@@ -21,16 +21,21 @@ SheetOverlay.displayName = 'SheetOverlay'
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    /** Por defecto a la derecha (paneles de lead y ticket). A la izquierda para el menú en celular. */
+    side?: 'left' | 'right'
+  }
+>(({ className, children, side = 'right', ...props }, ref) => (
   <DialogPrimitive.Portal>
     <SheetOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed right-0 top-0 z-50 h-full w-full max-w-xl border-l bg-card shadow-xl',
+        'fixed top-0 z-50 h-full w-full max-w-xl bg-card shadow-xl',
+        side === 'right'
+          ? 'right-0 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right'
+          : 'left-0 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
-        'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
         'duration-300 overflow-y-auto',
         className
       )}

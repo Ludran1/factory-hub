@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 interface Props {
   /** Alto del iframe. La página de Chat le da casi toda la pantalla. */
   className?: string
+  /** Clases de la tarjeta. En el celular la página la saca de borde a borde. */
+  cardClassName?: string
 }
 
 /**
@@ -15,7 +17,7 @@ interface Props {
  * real. Responder, ver adjuntos y el historial lo resuelve Kapso; acá solo se
  * muestra. El URL (con su token) se pide recién cuando este componente se monta.
  */
-export default function WhatsAppInbox({ className }: Props) {
+export default function WhatsAppInbox({ className, cardClassName }: Props) {
   const { data: url, isLoading, error } = useInboxEmbed(true)
 
   if (isLoading) {
@@ -43,7 +45,7 @@ export default function WhatsAppInbox({ className }: Props) {
   }
 
   return (
-    <Card className="overflow-hidden py-0">
+    <Card className={cn('overflow-hidden py-0', cardClassName)}>
       <iframe
         src={url}
         title="Bandeja de WhatsApp"

@@ -4,8 +4,9 @@ import { PageHeaderSlotsContext } from './pageHeaderSlots'
 
 interface Props {
   title: ReactNode
+  /** Se oculta en el celular: ahí la barra no tiene alto para dos líneas y se cortaba. */
   subtitle?: ReactNode
-  /** Botones de la sección. Van a la derecha de la barra, junto a la campanita. */
+  /** Botones de la sección. Van a la derecha de la barra; en el celular, en una segunda fila. */
   actions?: ReactNode
 }
 
@@ -24,8 +25,8 @@ export default function PageHeader({ title, subtitle, actions }: Props) {
     <>
       {slots.title && createPortal(
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight leading-tight truncate">{title}</h1>
-          {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
+          <h1 className="text-lg md:text-xl font-bold tracking-tight leading-tight truncate">{title}</h1>
+          {subtitle && <p className="hidden sm:block text-xs text-muted-foreground truncate">{subtitle}</p>}
         </div>,
         slots.title,
       )}

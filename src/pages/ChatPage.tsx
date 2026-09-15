@@ -12,8 +12,13 @@ export default function ChatPage() {
   return (
     <div className="animate-fade-in">
       <PageHeader title="Chat" subtitle="Conversaciones de WhatsApp del número de ventas" />
-      {/* 7rem = barra superior (3.5rem) + padding del layout arriba y abajo (3rem) + margen */}
-      <WhatsAppInbox className="h-[calc(100vh-7rem)] min-h-[560px]" />
+      {/* En el celular la bandeja va de borde a borde: -m-4 anula el padding del
+          layout y la tarjeta pierde borde y esquinas. Alto: la pantalla menos la
+          barra superior (3.5rem). Desde md vuelve a ser tarjeta con margen. */}
+      <WhatsAppInbox
+        cardClassName="-m-4 rounded-none border-0 shadow-none md:m-0 md:rounded-xl md:border md:shadow-sm"
+        className="h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-7rem)] md:min-h-[560px]"
+      />
     </div>
   )
 }

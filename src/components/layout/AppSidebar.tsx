@@ -42,8 +42,19 @@ const roleColors: Record<UserRole, string> = {
   marketing: 'text-pink-400',
 }
 
-export default function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+interface Props {
+  /**
+   * 'mobile': dentro del cajón que se abre en el celular. Siempre expandido (no
+   * tiene sentido colapsar un menú que ya está oculto) y cierra el cajón al navegar.
+   */
+  variant?: 'desktop' | 'mobile'
+  onNavigate?: () => void
+}
+
+export default function AppSidebar({ variant = 'desktop', onNavigate }: Props) {
+  const [collapsedState, setCollapsed] = useState(false)
+  const mobile = variant === 'mobile'
+  const collapsed = !mobile && collapsedState
   const { theme, toggle: toggleDark } = useTheme()
   const dark = theme === 'dark'
   const { profile, role } = useAuth()
@@ -57,6 +68,7 @@ export default function AppSidebar() {
   )
 
   const handleLogout = () => {
+    onNavigate?.()
     supabase.auth.signOut()
     useAuthStore.getState().reset()
     navigate('/login')
@@ -65,8 +77,10 @@ export default function AppSidebar() {
   return (
     <aside
       className={cn(
-        'relative flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300',
-        collapsed ? 'w-16' : 'w-60'
+        'relative flex flex-col bg-sidebar transition-all duration-300',
+        mobile
+          ? 'h-full w-full'
+          : cn('h-dvh border-r border-sidebar-border', collapsed ? 'w-16' : 'w-60')
       )}
     >
       {/* Header */}
@@ -85,12 +99,13 @@ export default function AppSidebar() {
       <Separator className="bg-sidebar-border" />
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-4 space-y-1">
+      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
         {visibleItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
@@ -149,16 +164,18 @@ export default function AppSidebar() {
         </Button>
       </div>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(c => !c)}
-        className="absolute -right-3 top-[72px] flex h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-      >
-        {collapsed
-          ? <ChevronRight className="h-3 w-3" />
-          : <ChevronLeft className="h-3 w-3" />
-        }
-      </button>
+      {/* Collapse toggle — solo en escritorio */}
+      {!mobile && (
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          className="absolute -right-3 top-[72px] flex h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+        >
+          {collapsed
+            ? <ChevronRight className="h-3 w-3" />
+            : <ChevronLeft className="h-3 w-3" />
+          }
+        </button>
+      )}
     </aside>
   )
 }
