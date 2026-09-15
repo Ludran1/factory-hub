@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { useNotes, useCreateNote, useSaveNote, useDeleteNote } from '@/hooks/useCollab'
 import { useAuth } from '@/hooks/useAuth'
 import {
-  Plus, Trash2, Loader2, Save, FileText,
+  Plus, Trash2, Loader2, Save, FileText, ChevronLeft,
   Bold, Italic, List, ListOrdered, Heading2, Code, Table as TableIcon, ListChecks
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -36,6 +36,10 @@ export default function NotesEditor({ projectId }: Props) {
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [showNewNote, setShowNewNote] = useState(false)
   const [newNoteTitle, setNewNoteTitle] = useState('')
+  // En el celular se ve la lista o la nota, no las dos (igual que la pizarra).
+  // Acá alcanza con ocultar por CSS: el contenido ya vino con la lista y el
+  // editor puede quedar montado.
+  const [abiertaEnCelular, setAbiertaEnCelular] = useState(false)
 
   const selectedNote = notes.find(n => n.id === selectedNoteId) ?? null
 
@@ -150,6 +154,7 @@ export default function NotesEditor({ projectId }: Props) {
         title: newNoteTitle.trim(),
       })
       setSelectedNoteId(note.id)
+      setAbiertaEnCelular(true)
       setNewNoteTitle('')
       setShowNewNote(false)
     } catch {
@@ -162,6 +167,7 @@ export default function NotesEditor({ projectId }: Props) {
     try {
       await deleteNote.mutateAsync({ id: selectedNote.id, project_id: projectId })
       setSelectedNoteId(null)
+      setAbiertaEnCelular(false)
       toast.success('Nota eliminada')
     } catch {
       toast.error('Error al eliminar')
@@ -177,9 +183,14 @@ export default function NotesEditor({ projectId }: Props) {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-15rem)] min-h-[640px]">
+    <div className="flex gap-4 h-[calc(100dvh-12rem)] min-h-[420px] md:h-[calc(100vh-15rem)] md:min-h-[640px]">
       {/* Sidebar — note list */}
-      <div className="w-56 shrink-0 flex flex-col gap-1 border rounded-xl p-2 overflow-y-auto">
+      <div
+        className={cn(
+          'w-full md:w-56 shrink-0 flex-col gap-1 border rounded-xl p-2 overflow-y-auto',
+          abiertaEnCelular ? 'hidden md:flex' : 'flex',
+        )}
+      >
         <div className="flex items-center justify-between px-1 py-1 mb-1">
           <span className="text-xs font-semibold text-muted-foreground">NOTAS</span>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNewNote(true)}>
@@ -221,15 +232,15 @@ export default function NotesEditor({ projectId }: Props) {
         {notes.map(note => (
           <button
             key={note.id}
-            onClick={() => setSelectedNoteId(note.id)}
+            onClick={() => { setSelectedNoteId(note.id); setAbiertaEnCelular(true) }}
             className={cn(
-              'w-full text-left px-2 py-2 rounded-lg transition-colors text-sm',
+              'w-full text-left px-2 py-2.5 md:py-2 rounded-lg transition-colors text-sm',
               note.id === selectedNoteId
                 ? 'bg-primary/10 text-primary'
                 : 'hover:bg-muted text-foreground'
             )}
           >
-            <p className="font-medium truncate text-xs">{note.title}</p>
+            <p className="font-medium truncate text-sm md:text-xs">{note.title}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {format(new Date(note.updated_at), 'dd MMM', { locale: es })}
               {' · '}{(note.author as { name: string } | null)?.name}
@@ -240,9 +251,23 @@ export default function NotesEditor({ projectId }: Props) {
 
       {/* Editor area */}
       {selectedNote ? (
-        <div className="flex-1 flex flex-col border rounded-xl overflow-hidden">
+        <div
+          className={cn(
+            'flex-1 min-w-0 flex-col border rounded-xl overflow-hidden',
+            abiertaEnCelular ? 'flex' : 'hidden md:flex',
+          )}
+        >
           {/* Toolbar */}
-          <div className="flex items-center gap-1 px-3 py-2 border-b bg-muted/30 flex-wrap">
+          <div className="flex items-center gap-1 px-2 md:px-3 py-2 border-b bg-muted/30 flex-wrap">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 md:hidden"
+              onClick={() => setAbiertaEnCelular(false)}
+              aria-label="Volver a las notas"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -357,7 +382,7 @@ export default function NotesEditor({ projectId }: Props) {
           </div>
 
           {/* Title */}
-          <div className="px-6 pt-4 pb-2">
+          <div className="px-4 md:px-6 pt-3 md:pt-4 pb-2">
             <Input
               value={title}
               onChange={e => { setTitle(e.target.value); scheduleAutosaveRef.current() }}
@@ -367,12 +392,17 @@ export default function NotesEditor({ projectId }: Props) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4 md:pb-6">
             <EditorContent editor={editor} />
           </div>
         </div>
       ) : (
-        <div className="flex-1 border rounded-xl flex flex-col items-center justify-center gap-3 text-muted-foreground">
+        <div
+          className={cn(
+            'flex-1 border rounded-xl flex-col items-center justify-center gap-3 text-muted-foreground',
+            abiertaEnCelular ? 'flex' : 'hidden md:flex',
+          )}
+        >
           <FileText className="h-10 w-10 opacity-30" />
           <p className="text-sm">Selecciona o crea una nota</p>
           <Button size="sm" variant="outline" onClick={() => setShowNewNote(true)}>

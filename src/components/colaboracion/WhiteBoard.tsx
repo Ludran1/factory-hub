@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useBoards, useBoardData, useCreateBoard, useSaveBoard, useDeleteBoard } from '@/hooks/useCollab'
 import { useAuth } from '@/hooks/useAuth'
-import { Plus, Save, Loader2, Trash2, Presentation } from 'lucide-react'
+import { useIsDesktop } from '@/hooks/useMediaQuery'
+import { Plus, Save, Loader2, Trash2, Presentation, ChevronLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
@@ -85,6 +86,13 @@ export default function WhiteBoard({ projectId }: Props) {
   const [newBoardName, setNewBoardName] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // En el celular no entran lista y lienzo lado a lado (el lienzo quedaba en
+  // 130 px): se ve uno a la vez, como en WhatsApp. Tocar una pizarra la abre y
+  // la flecha de la barra vuelve a la lista. En escritorio se ven los dos.
+  const esEscritorio = useIsDesktop()
+  const [abiertaEnCelular, setAbiertaEnCelular] = useState(false)
+  const mostrarLienzo = esEscritorio || abiertaEnCelular
+
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentDataRef = useRef<{ elements: readonly any[]; appState: any; files: any } | null>(null)
   const excalidrawApiRef = useRef<any>(null)
@@ -93,8 +101,11 @@ export default function WhiteBoard({ projectId }: Props) {
   const lastSavedRef = useRef<{ boardId: string; fp: string } | null>(null)
 
   const selectedBoard = boards.find(b => b.id === selectedBoardId) ?? boards[0] ?? null
-  // Solo el dibujo de la pizarra abierta: la lista ya no lo trae.
-  const { data: boardData, isLoading: loadingBoard } = useBoardData(selectedBoard?.id ?? null)
+  // Solo el dibujo de la pizarra abierta: la lista ya no lo trae. En el celular,
+  // mientras se mira la lista, no se descarga ninguna (hay pizarras de 700 kB).
+  const { data: boardData, isLoading: loadingBoard } = useBoardData(
+    mostrarLienzo ? selectedBoard?.id ?? null : null,
+  )
   const savedData = boardData?.excalidraw_data as { elements?: any[]; files?: Record<string, any> } | null | undefined
 
   useEffect(() => {
@@ -198,6 +209,7 @@ export default function WhiteBoard({ projectId }: Props) {
     try {
       await deleteBoard.mutateAsync({ id: selectedBoard.id, project_id: projectId })
       setSelectedBoardId(null)
+      setAbiertaEnCelular(false)
       toast.success('Pizarra eliminada')
     } catch {
       toast.error('Error al eliminar pizarra')
@@ -209,6 +221,7 @@ export default function WhiteBoard({ projectId }: Props) {
     try {
       const board = await createBoard.mutateAsync({ project_id: projectId, name: newBoardName.trim() })
       setSelectedBoardId(board.id)
+      setAbiertaEnCelular(true)
       setNewBoardName('')
       setShowNewBoard(false)
       toast.success('Pizarra creada')
@@ -234,9 +247,16 @@ export default function WhiteBoard({ projectId }: Props) {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-15rem)] min-h-[640px]">
+    // En el celular el alto es la pantalla menos barra superior (dos filas),
+    // pestañas y márgenes, para que el lienzo llegue hasta abajo.
+    <div className="flex gap-4 h-[calc(100dvh-12rem)] min-h-[420px] md:h-[calc(100vh-15rem)] md:min-h-[640px]">
       {/* Sidebar — board list */}
-      <div className="w-56 shrink-0 flex flex-col gap-1 border rounded-xl p-2 overflow-y-auto">
+      <div
+        className={cn(
+          'w-full md:w-56 shrink-0 flex-col gap-1 border rounded-xl p-2 overflow-y-auto',
+          abiertaEnCelular ? 'hidden md:flex' : 'flex',
+        )}
+      >
         <div className="flex items-center justify-between px-1 py-1 mb-1">
           <span className="text-xs font-semibold text-muted-foreground">PIZARRAS</span>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNewBoard(true)}>
@@ -278,15 +298,15 @@ export default function WhiteBoard({ projectId }: Props) {
         {boards.map(board => (
           <button
             key={board.id}
-            onClick={() => setSelectedBoardId(board.id)}
+            onClick={() => { setSelectedBoardId(board.id); setAbiertaEnCelular(true) }}
             className={cn(
-              'w-full text-left px-2 py-2 rounded-lg transition-colors text-sm',
+              'w-full text-left px-2 py-2.5 md:py-2 rounded-lg transition-colors text-sm',
               board.id === selectedBoard?.id
                 ? 'bg-primary/10 text-primary'
                 : 'hover:bg-muted text-foreground'
             )}
           >
-            <p className="font-medium truncate text-xs">{board.name}</p>
+            <p className="font-medium truncate text-sm md:text-xs">{board.name}</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {format(new Date(board.updated_at), 'dd MMM', { locale: es })}
               {(board as { updater?: { name: string } | null }).updater?.name
@@ -297,11 +317,21 @@ export default function WhiteBoard({ projectId }: Props) {
         ))}
       </div>
 
-      {/* Canvas area */}
-      {selectedBoard ? (
-        <div className="flex-1 flex flex-col border rounded-xl overflow-hidden">
+      {/* Canvas area. En el celular no se monta mientras se ve la lista: así
+          Excalidraw no arranca en un contenedor oculto de 0 px. */}
+      {mostrarLienzo && (selectedBoard ? (
+        <div className="flex-1 min-w-0 flex flex-col border rounded-xl overflow-hidden">
           {/* Toolbar */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30">
+          <div className="flex items-center gap-2 px-2 md:px-3 py-2 border-b bg-muted/30">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 md:hidden"
+              onClick={() => setAbiertaEnCelular(false)}
+              aria-label="Volver a las pizarras"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             <span className="text-sm font-medium truncate">{selectedBoard.name}</span>
             <div className="flex-1" />
             {saving && (
@@ -350,7 +380,7 @@ export default function WhiteBoard({ projectId }: Props) {
             <Plus className="h-4 w-4" /> Nueva pizarra
           </Button>
         </div>
-      )}
+      ))}
     </div>
   )
 }

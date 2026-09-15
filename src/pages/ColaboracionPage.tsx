@@ -65,10 +65,11 @@ export default function ColaboracionPage() {
         actions={isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : projects.length > 0 ? (
-          <div className="flex items-center gap-3">
+          // En el celular el selector ocupa el ancho que queda en la fila.
+          <div className="flex w-full items-center gap-3 md:w-auto">
             <PresenceBar users={presentUsers} />
             <Select value={activeProject ?? ''} onValueChange={setSelectedProject}>
-              <SelectTrigger className="w-52">
+              <SelectTrigger className="min-w-0 flex-1 md:w-52 md:flex-none">
                 <SelectValue placeholder="Seleccionar proyecto" />
               </SelectTrigger>
               <SelectContent>
